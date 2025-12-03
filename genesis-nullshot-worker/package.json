@@ -1,0 +1,22 @@
+{
+	"name": "genesis-ai-nullshot",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"cf-typegen": "wrangler types",
+		"build": "wrangler build"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"typescript": "^5.3.3",
+		"wrangler": "^3.95.0"
+	},
+	"dependencies": {
+		"@ai-sdk/google": "^2.0.44",
+		"ai": "^5.0.104",
+		"hono": "^4.7.7"
+	}
+}

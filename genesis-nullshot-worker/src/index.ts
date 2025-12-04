@@ -79,6 +79,10 @@ app.get('/', (c) => {
   return c.text('Genesis AI - NullShot Compatible Agent');
 });
 
+app.get('/health', (c) => {
+  return c.json({ status: 'healthy' });
+});
+
 // MCP Tool Handler
 app.post('/mcp', async (c) => {
   try {

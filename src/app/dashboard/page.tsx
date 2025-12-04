@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileExplorer } from '@/components/FileExplorer';
-import { Play, Code2, Send, Terminal, Zap, XCircle, FolderOpen, Cpu, Loader2, Sparkles, Brain, Bot, Rocket, Palette } from 'lucide-react';
+import { FileUpload } from '@/components/dashboard/FileUpload';
+import { Play, Code2, Send, Terminal, Zap, XCircle, FolderOpen, Cpu, Loader2, Sparkles, Brain, Bot, Rocket, Palette, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Mock initial file system (Empty state for "No Project Loaded")
+// Real file system from API responses
 const initialFiles = {};
 
 interface Message {
@@ -39,6 +40,12 @@ export default function DashboardPage() {
         { id: '1', role: 'system', content: 'Genesis Online. Describe the dApp you want to build.', timestamp: Date.now() }
     ]);
     const [activeAgent, setActiveAgent] = useState<AgentState | null>(null);
+    const [contractCode, setContractCode] = useState<string>('');
+    const [deploymentInfo, setDeploymentInfo] = useState<any>(null);
+    const [credits, setCredits] = useState<number>(0);
+    const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+    const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+    const [useSearch, setUseSearch] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +53,19 @@ export default function DashboardPage() {
         async function getUser() {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
+
+            // Fetch user credits
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('credits')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    setCredits(profile.credits || 0);
+                }
+            }
         }
         getUser();
     }, []);
@@ -54,60 +74,159 @@ export default function DashboardPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleGenerate = () => {
+    const handleExport = async () => {
+        if (Object.keys(files).length === 0) return;
+
+        const { exportProject } = await import('@/lib/utils/export');
+        await exportProject(files);
+    };
+
+    const saveProject = async (name: string) => {
+        if (!user) return;
+
+        const { createProject } = await import('@/lib/database/projects');
+        const { data, error } = await createProject({
+            name,
+            prompt: messages.find(m => m.role === 'user')?.content || '',
+            contract_code: contractCode,
+            contract_address: deploymentInfo?.address,
+            transaction_hash: deploymentInfo?.transactionHash,
+            files,
+            deployment_status: deploymentInfo?.success ? 'deployed' : 'pending',
+            credits_used: 0 // Will be updated by API
+        });
+
+        if (!error && data) {
+            setCurrentProjectId(data.id);
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'system',
+                content: `✅ Project "${name}" saved successfully!`,
+                timestamp: Date.now()
+            }]);
+        }
+    };
+
+    const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
         const newMessage: Message = { id: Date.now().toString(), role: 'user', content: prompt, timestamp: Date.now() };
         setMessages(prev => [...prev, newMessage]);
+        const userPrompt = prompt;
         setPrompt('');
         setIsGenerating(true);
+        setFiles({});
+        setContractCode('');
+        setDeploymentInfo(null);
 
-        // Simulate Agent Workflow
-        const agents = [
-            { name: 'Architect', icon: Brain, color: 'text-purple-400', message: 'Analyzing requirements...' },
-            { name: 'Engineer', icon: Bot, color: 'text-blue-400', message: 'Generating smart contract...' },
-            { name: 'Designer', icon: Palette, color: 'text-pink-400', message: 'Designing UI components...' },
-            { name: 'Deployer', icon: Rocket, color: 'text-orange-400', message: 'Preparing deployment...' }
-        ];
+        try {
+            // Call real API with Server-Sent Events
+            const response = await fetch('/api/build', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: userPrompt,
+                    stream: true,
+                    files: uploadedFiles,
+                    useSearch: useSearch
+                })
+            });
 
-        let step = 0;
-        const interval = setInterval(() => {
-            if (step < agents.length) {
-                setActiveAgent({
-                    name: agents[step].name,
-                    status: 'working',
-                    message: agents[step].message,
-                    icon: agents[step].icon,
-                    color: agents[step].color
-                });
-                step++;
-            } else {
-                clearInterval(interval);
-                setActiveAgent(null);
-                setIsGenerating(false);
-
-                const responseMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: 'Project generated successfully! Ready for review.',
-                    timestamp: Date.now()
-                };
-                setMessages(prev => [...prev, responseMessage]);
-
-                setFiles({
-                    'src/App.tsx': {
-                        content: `import React from 'react';\nimport './styles.css';\n\nexport default function App() {\n  return (\n    <div className="container">\n      <h1>Genesis Mock App</h1>\n      <p>Phase 2 Verification Successful</p>\n      <button className="btn">Open Sandbox</button>\n    </div>\n  );\n}`,
-                        language: 'typescript'
-                    },
-                    'src/styles.css': {
-                        content: `body {\n  background: #000;\n  color: #fff;\n  font-family: sans-serif;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  margin: 0;\n}\n\n.container {\n  text-align: center;\n}\n\nh1 {\n  color: #4ade80;\n  font-size: 3rem;\n  margin-bottom: 1rem;\n  text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);\n}\n\np {\n  color: #4ade80;\n  font-family: monospace;\n  opacity: 0.8;\n}\n\n.btn {\n  margin-top: 2rem;\n  padding: 0.5rem 1rem;\n  background: #333;\n  color: #fff;\n  border: 1px solid #444;\n  border-radius: 0.5rem;\n  cursor: pointer;\n}`,
-                        language: 'css'
-                    },
-                    'package.json': { content: '{\n  "name": "genesis-app",\n  "version": "1.0.0"\n}', language: 'json' }
-                });
-                setActiveFile('src/App.tsx');
+            if (!response.ok) {
+                throw new Error('Failed to generate dApp');
             }
-        }, 1500);
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) throw new Error('No response stream');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'status') {
+                            // Update active agent
+                            const agentIcons: any = {
+                                'architect': Brain,
+                                'engineer': Bot,
+                                'designer': Palette,
+                                'deployer': Rocket
+                            };
+                            const agentColors: any = {
+                                'architect': 'text-purple-400',
+                                'engineer': 'text-blue-400',
+                                'designer': 'text-pink-400',
+                                'deployer': 'text-orange-400'
+                            };
+
+                            setActiveAgent({
+                                name: data.agent.charAt(0).toUpperCase() + data.agent.slice(1),
+                                status: 'working',
+                                message: data.message,
+                                icon: agentIcons[data.agent] || Cpu,
+                                color: agentColors[data.agent] || 'text-white'
+                            });
+                        } else if (data.type === 'message') {
+                            setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'assistant',
+                                content: data.content,
+                                timestamp: data.timestamp
+                            }]);
+                        } else if (data.type === 'complete') {
+                            setActiveAgent(null);
+                            setIsGenerating(false);
+                            setContractCode(data.contractCode);
+                            setFiles(data.files || {});
+                            setDeploymentInfo(data.deployment);
+                            setActiveFile(Object.keys(data.files || {})[0] || null);
+
+                            // Update credits
+                            if (data.creditsRemaining !== undefined) {
+                                setCredits(data.creditsRemaining);
+                            }
+
+                            // Auto-save project
+                            const projectName = `Project-${new Date().toISOString().split('T')[0]}`;
+                            await saveProject(projectName);
+
+                            setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'assistant',
+                                content: `✅ Project generated successfully!\n${data.deployment?.success ? `\n🚀 Deployed to: ${data.deployment.address}` : ''}`,
+                                timestamp: Date.now()
+                            }]);
+                        } else if (data.type === 'error') {
+                            setActiveAgent(null);
+                            setIsGenerating(false);
+                            setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'assistant',
+                                content: `❌ Error: ${data.message}`,
+                                timestamp: Date.now()
+                            }]);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            setActiveAgent(null);
+            setIsGenerating(false);
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                timestamp: Date.now()
+            }]);
+        }
     };
 
     const hasProject = Object.keys(files).length > 0;
@@ -134,7 +253,20 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="h-9 border-white/[0.1] bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:text-white transition-all hover:border-purple-500/30 rounded-lg">
+                    {/* Credits Display */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.1]">
+                        <Sparkles className="h-3.5 w-3.5 text-yellow-400" />
+                        <span className="text-sm font-medium text-white">{credits}</span>
+                        <span className="text-xs text-white/50">credits</span>
+                    </div>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 border-white/[0.1] bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:text-white transition-all hover:border-purple-500/30 rounded-lg"
+                        onClick={handleExport}
+                        disabled={!hasProject}
+                    >
                         <Terminal className="mr-2 h-3.5 w-3.5" /> Export
                     </Button>
                 </div>
@@ -231,8 +363,8 @@ export default function DashboardPage() {
                                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div className={`max-w-[90%] rounded-2xl p-5 text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                            ? 'bg-white/10 text-white'
-                                            : 'bg-white/[0.05] text-white/80 border border-white/[0.05]'
+                                        ? 'bg-white/10 text-white'
+                                        : 'bg-white/[0.05] text-white/80 border border-white/[0.05]'
                                         }`}>
                                         {msg.content}
                                     </div>
@@ -243,7 +375,24 @@ export default function DashboardPage() {
                     </ScrollArea>
 
                     {/* Input Area */}
-                    <div className="p-6 border-t border-white/[0.1] bg-black/80 backdrop-blur-xl absolute bottom-0 left-0 right-0">
+                    <div className="p-6 border-t border-white/[0.1] bg-black/80 backdrop-blur-xl absolute bottom-0 left-0 right-0 space-y-3">
+                        {/* File Upload and Search Toggle */}
+                        <div className="flex items-center justify-between">
+                            <FileUpload onFilesSelected={(files) => setUploadedFiles(files)} />
+
+                            <button
+                                onClick={() => setUseSearch(!useSearch)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${useSearch
+                                    ? 'bg-purple-500/20 border-purple-500/50 text-purple-300'
+                                    : 'bg-white/[0.05] border-white/[0.1] text-white/50 hover:text-white'
+                                    }`}
+                            >
+                                <Search className="h-3.5 w-3.5" />
+                                <span className="text-xs font-medium">Web Search</span>
+                            </button>
+                        </div>
+
+                        {/* Prompt Input */}
                         <div className="relative group">
                             <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/50 to-indigo-500/50 rounded-xl opacity-0 group-focus-within:opacity-100 transition duration-500 blur opacity-20"></div>
                             <Input
@@ -251,13 +400,15 @@ export default function DashboardPage() {
                                 placeholder="Describe your dApp..."
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleGenerate()}
+                                disabled={isGenerating}
                             />
                             <Button
                                 size="icon"
                                 variant="ghost"
                                 className="absolute right-2 top-2 h-10 w-10 text-white/50 hover:text-white hover:bg-white/10 transition-colors z-20 rounded-lg"
                                 onClick={handleGenerate}
+                                disabled={isGenerating}
                             >
                                 <Send className="h-4 w-4" />
                             </Button>
@@ -281,8 +432,8 @@ export default function DashboardPage() {
                                 size="sm"
                                 onClick={() => setView('preview')}
                                 className={`h-7 px-3 text-[11px] gap-1.5 shadow-sm rounded-md font-medium transition-all ${view === 'preview'
-                                        ? 'bg-white/10 text-white'
-                                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                                    ? 'bg-white/10 text-white'
+                                    : 'text-white/40 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 <Play className="h-3 w-3 fill-current" /> Preview
@@ -292,8 +443,8 @@ export default function DashboardPage() {
                                 size="sm"
                                 onClick={() => setView('code')}
                                 className={`h-7 px-3 text-[11px] gap-1.5 rounded-md transition-all ${view === 'code'
-                                        ? 'bg-white/10 text-white'
-                                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                                    ? 'bg-white/10 text-white'
+                                    : 'text-white/40 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 <Code2 className="h-3 w-3" /> Code
@@ -346,7 +497,7 @@ export default function DashboardPage() {
                                     className="w-full h-full p-6 overflow-auto bg-[#0A0A0A]"
                                 >
                                     <pre className="font-mono text-sm text-blue-300/90 leading-relaxed">
-                                        {activeFile && files[activeFile] ? files[activeFile].content : '// No file selected'}
+                                        {activeFile && files[activeFile as keyof typeof files] ? (files[activeFile as keyof typeof files] as any).content : '// No file selected'}
                                     </pre>
                                 </motion.div>
                             )

@@ -24,8 +24,5 @@
 				"GenesisAgent"
 			]
 		}
-	],
-	"vars": {
-		"GOOGLE_API_KEY": "AIzaSyBtSDb_XoJMx5GdVCKLK_CgZMwEvajT4nw"
-	}
+	]
 }

@@ -71,32 +71,6 @@ export async function POST(req: Request) {
             useSearch
         });
 
-        // Mock Mode for Testing
-        if (sanitizedPrompt === "TEST_MOCK") {
-            return new Response(JSON.stringify({
-                success: true,
-                messages: [
-                    { role: 'architect', content: 'Mock Mode: Planning...', timestamp: Date.now() },
-                    { role: 'engineer', content: 'Mock Mode: Coding...', timestamp: Date.now() },
-                    { role: 'designer', content: 'Mock Mode: UI Generated.', timestamp: Date.now() }
-                ],
-                contractCode: "// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.0;\\ncontract MockToken {}",
-                files: {
-                    "/App.js": {
-                        content: `import React from 'react';\nimport './styles.css';\n\nexport default function App() {\n  return (\n    <div className="container">\n      <h1>Genesis Mock App</h1>\n      <p>Phase 3 Verification Successful</p>\n    </div>\n  );\n}`,
-                        language: "javascript"
-                    },
-                    "/styles.css": {
-                        content: ".container { padding: 20px; color: #00ff00; background: #111; height: 100vh; }",
-                        language: "css"
-                    }
-                },
-                deployment: { success: true, address: "0xMockAddress123", transactionHash: "0xMockHash" },
-                creditsUsed: 0
-            }), {
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
 
         // Check user's current credits
         const { data: profile, error: profileError } = await supabaseAdmin

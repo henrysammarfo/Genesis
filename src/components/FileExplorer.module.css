@@ -1,0 +1,65 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-panel);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+}
+
+.header {
+    padding: var(--space-3) var(--space-4);
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 11px;
+}
+
+.fileList {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2) 0;
+}
+
+.fileItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 6px var(--space-4);
+    cursor: pointer;
+    transition: background 0.1s ease;
+    border-left: 2px solid transparent;
+}
+
+.fileItem:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+}
+
+.fileItem.active {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-glow);
+    border-left-color: var(--accent-glow);
+}
+
+.fileName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Icons */
+.iconJs {
+    color: #F7DF1E;
+}
+
+.iconCss {
+    color: #42A5F5;
+}
+
+.iconJson {
+    color: #FBC02D;
+}

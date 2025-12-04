@@ -37,7 +37,7 @@ export class GenesisAgent implements DurableObject {
         const body = await request.json() as { messages: CoreMessage[] };
         const { messages } = body;
 
-        if (!messages) {
+        if (!messages || messages.length === 0) {
           return new Response('Missing messages in body', { status: 400 });
         }
 
@@ -89,12 +89,14 @@ app.post('/mcp', async (c) => {
     const body = await c.req.json();
     const { method, params } = body;
 
-    // Initialize handlers
-    // In a real deployment, you'd get the private key from env
-    const handlers = new MCPHandlers(
-      new GenesisAgent(c.env.GENESIS_AGENT as any, c.env).model,
-      undefined
-    );
+    // Initialize Google AI model
+    const google = createGoogleGenerativeAI({
+      apiKey: c.env.GOOGLE_API_KEY,
+    });
+    const model = google('gemini-2.0-flash');
+
+    // Initialize handlers with model
+    const handlers = new MCPHandlers(model, undefined);
 
     if (method === 'tools/list') {
       return c.json({

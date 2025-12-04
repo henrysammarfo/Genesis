@@ -15,7 +15,7 @@ interface TestResult {
 const results: TestResult[] = [];
 
 // MCP Worker URL (update this with your deployed worker URL)
-const MCP_WORKER_URL = process.env.MCP_WORKER_URL || 'http://localhost:8787';
+const MCP_WORKER_URL = process.env.MCP_WORKER_URL || 'https://genesis-ai.genesis-ai.workers.dev';
 
 async function runTest(name: string, testFn: () => Promise<any>): Promise<void> {
     const startTime = Date.now();

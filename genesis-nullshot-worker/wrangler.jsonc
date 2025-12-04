@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "genesis-ai",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-22",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "GENESIS_AGENT",
+				"class_name": "GenesisAgent"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"GenesisAgent"
+			]
+		}
+	]
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "genesis": {
+      "command": "node",
+      "args": [
+        "dist/mcp-server.js"
+      ],
+      "env": {
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}"
+      }
+    }
+  }
+}

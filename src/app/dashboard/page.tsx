@@ -251,7 +251,7 @@ export default function Dashboard() {
         const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace', 'staking', 'swap', 'lending']
         const isBuildRequest = buildKeywords.some(keyword => userMessageOriginal.toLowerCase().includes(keyword))
         
-        // If it's a build request, automatically start the build process
+        // If it's a build request, automatically start the build process IMMEDIATELY
         if (isBuildRequest) {
             // Add a quick acknowledgment message
             setMessages(prev => [...prev, {
@@ -259,8 +259,130 @@ export default function Dashboard() {
                 content: `🚀 Got it! Genesis will automatically create everything for you. Generating plan now...`,
                 timestamp: new Date()
             }])
+            
+            // IMMEDIATELY start the build process - no AI chat, just build
+            setIsGenerating(true)
+            setStatus('PLANNING')
+            
+            try {
+                // Call real build API with project ID - it will search web, generate plan, then code
+                const response = await fetch('/api/build', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: userMessageOriginal,
+                        projectId: currentProjectId,
+                        useSearch: true // Enable web search for inspiration
+                    })
+                })
+
+                const data = await response.json()
+
+                if (!response.ok || !data.success) {
+                    let errorMessage = data.error || 'Generation failed. Please try again.'
+                    
+                    // Convert all API/quota errors to credit-related messages
+                    if (errorMessage.includes('quota') || errorMessage.includes('Quota') || errorMessage.includes('exceeded')) {
+                        errorMessage = `⚠️ Insufficient credits or API limit reached. You have ${credits} credits. Please check your credits or wait a moment before trying again.`
+                    } else if (errorMessage.includes('API key') || errorMessage.includes('GOOGLE_GENERATIVE_AI_API_KEY')) {
+                        errorMessage = '⚠️ Google AI API key is missing. Please add GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY to your .env.local file.'
+                    } else if (errorMessage.includes('Insufficient credits')) {
+                        // Keep credit messages as-is
+                        errorMessage = `⚠️ ${errorMessage}`
+                    }
+                    
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: errorMessage,
+                        timestamp: new Date()
+                    }])
+                    setStatus('IDLE')
+                    setIsGenerating(false)
+                    return
+                }
+
+                // Handle plan generation response
+                if (data.planGenerated && data.plan) {
+                    setStatus('IDLE')
+                    setIsGenerating(false)
+                    
+                    // Update credits from API response
+                    if (data.creditsRemaining !== undefined) {
+                        setCredits(data.creditsRemaining)
+                    }
+                    
+                    // Store plan prompt for later code generation
+                    const planPrompt = data.planPrompt
+                    
+                    // Check if ENV keys are needed
+                    if (data.needsEnvKeys) {
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: `⚠️ ${data.message}\n\nPlease add your environment variables in Settings, then approve the plan to continue.`,
+                            timestamp: new Date()
+                        }])
+                    }
+                    
+                    // Reload messages to get the plan message
+                    const { data: msgs } = await supabase
+                        .from('project_messages')
+                        .select('*')
+                        .eq('project_id', currentProjectId)
+                        .order('created_at', { ascending: true })
+
+                    if (msgs && msgs.length > 0) {
+                        // Check for plan messages and set the plan
+                        const planMessage = msgs.find(m => m.metadata?.type === 'plan')
+                        if (planMessage && planMessage.content) {
+                            try {
+                                const planText = planMessage.content
+                                const stepMatches = planText.match(/(?:^|\n)\d+\.\s*([^\n]+)/g)
+                                const steps = stepMatches ? stepMatches.map((s: string) => s.replace(/^\d+\.\s*/, '').trim()) : []
+                                
+                                const componentMatches = planText.match(/(?:contracts?|frontend|backend|components?):\s*([^\n]+)/gi)
+                                const components = componentMatches ? componentMatches.map((c: string) => c.split(':')[1]?.trim()).filter(Boolean) : []
+                                
+                                if (steps.length > 0 || components.length > 0) {
+                                    setCurrentPlan({
+                                        steps: steps.length > 0 ? steps : ['Review the plan below'],
+                                        components: components.length > 0 ? components : ['Project Structure'],
+                                        estimatedTime: '15-20 minutes',
+                                        planPrompt: planPrompt, // Store for approval
+                                        creditsUsed: data.creditsUsed,
+                                        creditsRemaining: data.creditsRemaining,
+                                        estimatedGenerationCredits: data.estimatedGenerationCredits
+                                    } as Plan & { planPrompt?: string; creditsUsed?: number; creditsRemaining?: number; estimatedGenerationCredits?: number })
+                                }
+                            } catch (e) {
+                                console.error('Error parsing plan:', e)
+                            }
+                        }
+                        
+                        setMessages(msgs.map(m => ({
+                            role: m.role as 'user' | 'assistant',
+                            content: m.content,
+                            timestamp: new Date(m.created_at)
+                        })))
+                    }
+                }
+                return
+            } catch (error: any) {
+                let errorMsg = error.message || 'Generation failed. Please try again.'
+                if (errorMsg.includes('quota') || errorMsg.includes('Quota') || errorMsg.includes('exceeded')) {
+                    errorMsg = `⚠️ Insufficient credits or API limit reached. You have ${credits} credits. Please check your credits or wait before trying again.`
+                }
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: errorMsg,
+                    timestamp: new Date()
+                }])
+                setStatus('IDLE')
+                setIsGenerating(false)
+            }
+            return // Exit early - don't continue to regular chat
         }
         
+        // Regular conversation - use real AI agent
         if (!isBuildRequest) {
             // Regular conversation - use real AI agent
         setIsGenerating(true)

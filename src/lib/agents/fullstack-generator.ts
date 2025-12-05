@@ -42,12 +42,19 @@ export async function generateFullStackDApp(prompt: string): Promise<FullStackPr
         throw new Error('Failed to initialize Google AI model. Please check your API key.');
     }
 
-    const systemPrompt = `You are a full-stack Web3 developer. Generate a COMPLETE dApp with:
-1. Smart contracts (Solidity)
-2. Frontend (React/Next.js)
-3. Backend API (if needed)
-4. Configuration files
-5. README with setup instructions
+    const systemPrompt = `You are a full-stack Web3 developer generating code for the Genesis platform. Generate a COMPLETE, production-ready dApp with:
+1. Smart contracts (Solidity) - fully functional and deployable
+2. Frontend (React/Next.js) - complete UI with Web3 integration
+3. Backend API (if needed) - fully integrated
+4. Configuration files - all dependencies and setup
+5. README - brief overview (Genesis handles deployment automatically)
+
+IMPORTANT: 
+- Generate COMPLETE, working code - not snippets or examples
+- All contracts should be ready to deploy
+- Frontend should be fully functional with wallet connection
+- Everything should work together automatically
+- No instructions to use external tools - Genesis handles everything
 
 Return ONLY valid JSON in this format:
 {
@@ -151,14 +158,21 @@ export async function generatePlan(prompt: string): Promise<string> {
 
     const result = await generateText({
         model,
-        system: `You are an expert Web3 architect. Create a detailed plan for building a dApp.
+        system: `You are an expert Web3 architect creating a plan for the Genesis platform. Create a detailed plan for building a dApp.
+
 Include:
 1. Project structure
-2. Smart contracts needed
-3. Frontend components
+2. Smart contracts needed (with deployment details)
+3. Frontend components (with Web3 integration)
 4. Backend services (if any)
-5. Integration steps
+5. Integration steps (how everything connects)
 6. Testing strategy
+
+IMPORTANT: 
+- Genesis will automatically generate, deploy, and connect everything
+- No need to mention external tools or manual steps
+- Focus on what will be created and how it works
+- Be specific and actionable
 
 Be specific and actionable.`,
         prompt: `Create a plan for: ${prompt}`,

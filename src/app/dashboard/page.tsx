@@ -247,8 +247,19 @@ export default function Dashboard() {
         setMessages(prev => [...prev, { role: 'user', content: userMessageOriginal, timestamp: new Date() }])
 
         // Check if this is a dApp build request or regular conversation
-        const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace']
+        // Auto-detect build requests - if user says "create", "build", "make", "generate" + dApp-related terms
+        const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace', 'staking', 'swap', 'lending']
         const isBuildRequest = buildKeywords.some(keyword => userMessageOriginal.toLowerCase().includes(keyword))
+        
+        // If it's a build request, automatically start the build process
+        if (isBuildRequest) {
+            // Add a quick acknowledgment message
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: `🚀 Got it! Genesis will automatically create everything for you. Generating plan now...`,
+                timestamp: new Date()
+            }])
+        }
         
         if (!isBuildRequest) {
             // Regular conversation - use real AI agent

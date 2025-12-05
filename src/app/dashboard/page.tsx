@@ -338,14 +338,19 @@ export default function Dashboard() {
             if (!response.ok || !data.success) {
                 let errorMessage = data.error || 'Generation failed. Please try again.'
                 
-                // Handle API key errors specifically
-                if (errorMessage.includes('API key') || errorMessage.includes('GOOGLE_GENERATIVE_AI_API_KEY')) {
+                // Convert all API/quota errors to credit-related messages
+                if (errorMessage.includes('quota') || errorMessage.includes('Quota') || errorMessage.includes('exceeded')) {
+                    errorMessage = `⚠️ Insufficient credits or API limit reached. You have ${credits} credits. Please check your credits or wait a moment before trying again.`
+                } else if (errorMessage.includes('API key') || errorMessage.includes('GOOGLE_GENERATIVE_AI_API_KEY')) {
                     errorMessage = '⚠️ Google AI API key is missing. Please add GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY to your .env.local file.'
+                } else if (errorMessage.includes('Insufficient credits')) {
+                    // Keep credit messages as-is
+                    errorMessage = `⚠️ ${errorMessage}`
                 }
                 
                 setMessages(prev => [...prev, {
                     role: 'assistant',
-                    content: `❌ Error: ${errorMessage}`,
+                    content: errorMessage,
                     timestamp: new Date()
                 }])
                 setStatus('IDLE')
@@ -832,10 +837,24 @@ export default function Dashboard() {
                                                         const data = await response.json()
                                                         
                                                         if (!response.ok || !data.success) {
-                                                            throw new Error(data.error || 'Code generation failed')
+                                                            let errorMsg = data.error || 'Code generation failed'
+                                                            
+                                                            // Convert quota errors to credit messages
+                                                            if (errorMsg.includes('quota') || errorMsg.includes('Quota') || errorMsg.includes('exceeded')) {
+                                                                errorMsg = `⚠️ Insufficient credits or API limit reached. You have ${credits} credits. Please check your credits or wait before trying again.`
+                                                            }
+                                                            
+                                                            throw new Error(errorMsg)
                                                         }
                                                         
-                                                        // Reload files
+                                                        // Show success message
+                                                        setMessages(prev => [...prev, {
+                                                            role: 'assistant',
+                                                            content: `✅ Successfully generated ${data.filesGenerated || 0} files! Check the Explorer panel to view your code.`,
+                                                            timestamp: new Date()
+                                                        }])
+                                                        
+                                                        // Reload files immediately
                                                         const { data: files } = await supabase
                                                             .from('project_files')
                                                             .select('*')
@@ -850,6 +869,7 @@ export default function Dashboard() {
                                                             })))
                                                             setSelectedFile(files[0].name)
                                                             setGeneratedCode(files[0].content)
+                                                            setPreviewMode('preview') // Switch to preview mode
                                                         }
                                                         
                                                         // Reload messages
@@ -872,9 +892,16 @@ export default function Dashboard() {
                                                             setCredits(data.creditsRemaining)
                                                         }
                                                     } catch (error: any) {
+                                                        let errorMsg = error.message || 'Code generation failed'
+                                                        
+                                                        // Convert quota errors to credit messages
+                                                        if (errorMsg.includes('quota') || errorMsg.includes('Quota') || errorMsg.includes('exceeded')) {
+                                                            errorMsg = `⚠️ Insufficient credits or API limit reached. You have ${credits} credits. Please check your credits or wait before trying again.`
+                                                        }
+                                                        
                                                         setMessages(prev => [...prev, {
                                                             role: 'assistant',
-                                                            content: `❌ Error: ${error.message || 'Code generation failed'}`,
+                                                            content: errorMsg,
                                                             timestamp: new Date()
                                                         }])
                                                         setStatus('IDLE')

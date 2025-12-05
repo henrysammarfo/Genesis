@@ -92,6 +92,11 @@ export async function POST(req: NextRequest) {
         description: `Refund for failed generation: ${error.message}`
       });
 
+      // Convert quota errors to credit-related messages
+      if (error?.message?.includes('quota') || error?.message?.includes('Quota') || error?.message?.includes('exceeded')) {
+        throw new Error(`Insufficient credits or API quota limit reached. Please check your credits (you had ${profile.credits}) or wait a moment before trying again.`);
+      }
+
       throw error;
     }
 
@@ -202,9 +207,19 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Generate API error:', error);
+    
+    // Convert quota/API errors to user-friendly credit messages
+    let errorMessage = error.message || 'Internal server error';
+    
+    if (errorMessage.includes('quota') || errorMessage.includes('Quota') || errorMessage.includes('exceeded')) {
+      errorMessage = 'Insufficient credits or API limit reached. Please check your credits or wait before trying again.';
+    } else if (errorMessage.includes('API key')) {
+      errorMessage = 'API configuration error. Please check your environment variables.';
+    }
+    
     return NextResponse.json({
       success: false,
-      error: error.message || 'Internal server error'
+      error: errorMessage
     }, { status: 500 });
   }
 }

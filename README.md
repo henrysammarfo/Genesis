@@ -7,51 +7,117 @@ An AI-powered platform that transforms natural language into production-ready de
 
 ---
 
-## 🎯 For Judges: Testing Without Frontend
+## 🎯 For Judges: Testing Options
 
-**The Genesis backend (AI Agent + MCP Server) is fully functional and can be tested via API - no frontend required!**
+**Genesis offers TWO ways to test - choose what works best for you:**
 
-### Option 1: Test Locally (Recommended - No Deployment Needed)
+### Option 1: Test Backend Only (Recommended - No Limits!)
+
+Test the AI Agent and MCP Server directly via API using **your own Google API key** (no rate limits!):
 
 ```bash
-# 1. Navigate to worker directory
-cd genesis-nullshot-worker
+# 1. Clone and navigate
+git clone https://github.com/henrysammarfo/Genesis.git
+cd Genesis/genesis-nullshot-worker
 
-# 2. Install dependencies (if not already done)
+# 2. Install dependencies
 npm install
 
-# 3. Start local development server
+# 3. Add YOUR Google API key (get free key at https://aistudio.google.com/apikey)
+echo "GOOGLE_API_KEY=your_api_key_here" > .dev.vars
+
+# 4. Start server
 npm run dev
 # Server runs at http://localhost:8787
-```
 
-**Test the local server:**
-```bash
-# Health check
+# 5. Test in another terminal
 curl http://localhost:8787/health
 # Returns: {"status":"healthy"}
+```
 
-# List MCP tools
+**Why this option?**
+- ✅ Use YOUR own API key - no rate limits
+- ✅ Test AI Agent with real Gemini 2.0 Flash
+- ✅ Test MCP Server security analysis
+- ✅ No deployment needed
+- ✅ Full control
+
+### Option 2: Test Full Stack (Frontend + Backend)
+
+> **⚠️ Note:** The deployed version uses our free-tier API key which has rate limits. For unlimited testing, use Option 1 with your own API key!
+
+**Live Demo:** [Your deployed URL here]
+
+**OR run locally with full UI:**
+
+```bash
+# 1. Clone repository
+git clone https://github.com/henrysammarfo/Genesis.git
+cd Genesis
+
+# 2. Install dependencies
+npm install
+
+# 3. Set up environment variables
+# Copy .env.local.example to .env.local and add your keys:
+GEMINI_API_KEY=your_google_api_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# ... (see .env.local for all variables)
+
+# 4. Start frontend
+npm run dev
+# Open http://localhost:3000
+
+# 5. In another terminal, start backend
+cd genesis-nullshot-worker
+npm run dev
+```
+
+**What you can test:**
+- ✅ Full dashboard UI
+- ✅ Project management
+- ✅ AI chat interface
+- ✅ Real-time code generation
+- ✅ Security analysis
+- ✅ Complete user experience
+
+---
+
+## ⚡ Quick Backend Testing Examples
+
+### Test AI Agent
+```bash
+curl -X POST http://localhost:8787/agent/chat/test-session `
+  -H "Content-Type: application/json" `
+  -d '{"messages": [{"role": "user", "content": "Explain ERC20 tokens and show me a secure implementation"}]}'
+```
+
+**Response:** Real-time streaming from Gemini 2.0 Flash with code examples!
+
+### Test MCP Security Analysis
+```bash
+curl -X POST http://localhost:8787/mcp `
+  -H "Content-Type: application/json" `
+  -d '{
+    "method": "tools/call",
+    "params": {
+      "name": "analyze_security",
+      "arguments": {
+        "source_code": "pragma solidity ^0.8.0;\ncontract Vault {\n  mapping(address => uint256) public balances;\n  function withdraw(uint256 amount) public {\n    require(balances[msg.sender] >= amount);\n    (bool success,) = msg.sender.call{value: amount}(\"\");\n    balances[msg.sender] -= amount;\n  }\n}"
+      }
+    }
+  }'
+```
+
+**Response:** Identifies reentrancy vulnerability with recommendations!
+
+### List MCP Tools
+```bash
 curl -X POST http://localhost:8787/mcp `
   -H "Content-Type: application/json" `
   -d '{"method": "tools/list"}'
-
-# Test AI Agent
-curl -X POST http://localhost:8787/agent/chat/test-session `
-  -H "Content-Type: application/json" `
-  -d '{"messages": [{"role": "user", "content": "Explain ERC20 tokens"}]}'
 ```
-
-### Option 2: Test Deployed Worker (If Available)
-
-If the worker is deployed to Cloudflare, find the URL:
-```bash
-cd genesis-nullshot-worker
-npx wrangler deployments list
-# Look for: https://genesis-ai.<account>.workers.dev
-```
-
-Replace `localhost:8787` with the deployed URL in the commands above.
 
 ---
 
@@ -66,6 +132,7 @@ Genesis democratizes Web3 development through AI-powered code generation and ana
 - 📝 **Smart Contract Generation** - Production-ready Solidity code
 - ⚡ **Real-time Streaming** - Live responses via Server-Sent Events
 - 🏗️ **NullShot Framework** - Built on Cloudflare Durable Objects
+- 🎨 **Modern UI** - Next.js 16 + React 19 dashboard
 
 ---
 
@@ -73,13 +140,13 @@ Genesis democratizes Web3 development through AI-powered code generation and ana
 
 ```
 ┌─────────────────────────────────────────────────┐
-│         Client (HTTP/MCP Protocol)              │
-│    • curl / HTTP requests                       │
-│    • MCP Inspector                              │
-│    • Any MCP-compatible client                  │
+│         Frontend (Next.js)                      │
+│    • Dashboard UI                               │
+│    • Project Management                         │
+│    • Real-time Chat                             │
 └─────────────────┬───────────────────────────────┘
                   │
-                  │ HTTP/HTTPS
+                  │ HTTP/WebSocket
                   │
 ┌─────────────────▼───────────────────────────────┐
 │      Genesis Worker (Cloudflare)                │
@@ -99,6 +166,14 @@ Genesis democratizes Web3 development through AI-powered code generation and ana
 │  │  • deploy_contract                         │ │
 │  └────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────┘
+                  │
+                  │
+┌─────────────────▼───────────────────────────────┐
+│         Supabase (Database)                     │
+│    • User authentication                        │
+│    • Project storage                            │
+│    • Message history                            │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -110,23 +185,43 @@ Genesis democratizes Web3 development through AI-powered code generation and ana
 - **Powered by Gemini 2.0 Flash** - Advanced reasoning and code generation
 - **Session-based** - Persistent conversations via Durable Objects
 - **Streaming Responses** - Real-time text streaming
+- **Multi-turn Conversations** - Context-aware follow-ups
 
 ### Genesis MCP Server  
 - **Security Analysis** - Scans smart contracts for vulnerabilities
+  - Reentrancy detection
+  - Access control verification
+  - Unsafe external calls
+  - tx.origin usage
 - **Source Verification** - Generates Etherscan verification URLs
 - **Contract Deployment** - Deployment guidance for Sepolia testnet
 - **MCP Protocol** - Compatible with any MCP client
+
+### Frontend Dashboard
+- **Project Management** - Create and organize dApp projects
+- **Real-time Chat** - Interactive AI conversation interface
+- **Code Preview** - View generated smart contracts
+- **User Authentication** - Secure Supabase auth
+- **Credit System** - Track API usage
 
 ---
 
 ## 🛠️ Technology Stack
 
+**Backend:**
 - **AI Model:** Google Gemini 2.0 Flash Experimental
 - **Framework:** NullShot (Cloudflare Durable Objects)
 - **Protocol:** Model Context Protocol (MCP)
 - **Runtime:** Cloudflare Workers
 - **Language:** TypeScript
 - **Web Framework:** Hono
+
+**Frontend:**
+- **Framework:** Next.js 16
+- **UI Library:** React 19
+- **Styling:** TailwindCSS
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Supabase Auth
 
 ---
 
@@ -143,7 +238,13 @@ Genesis/
 │   │   └── ...
 │   ├── wrangler.jsonc        # Cloudflare config
 │   └── package.json
-├── src/                      # Frontend (Next.js - in progress)
+├── src/                      # Frontend (Next.js)
+│   ├── app/                  # App router
+│   │   ├── dashboard/        # Dashboard pages
+│   │   ├── api/              # API routes
+│   │   └── auth/             # Auth pages
+│   ├── components/           # React components
+│   └── lib/                  # Utilities
 ├── supabase/                 # Database migrations
 └── README.md
 ```
@@ -154,9 +255,10 @@ Genesis/
 
 ### Prerequisites
 - Node.js 18+
-- Google AI API key (for Gemini)
+- Google AI API key (get free at https://aistudio.google.com/apikey)
+- Supabase account (optional, for frontend)
 
-### Local Development
+### Backend Only (Recommended for Testing)
 
 ```bash
 # 1. Clone repository
@@ -166,7 +268,7 @@ cd Genesis/genesis-nullshot-worker
 # 2. Install dependencies
 npm install
 
-# 3. Set up environment (create .dev.vars file)
+# 3. Create .dev.vars file with your API key
 echo "GOOGLE_API_KEY=your_api_key_here" > .dev.vars
 
 # 4. Start development server
@@ -174,14 +276,36 @@ npm run dev
 # Server runs at http://localhost:8787
 ```
 
-### Deployment to Cloudflare
+### Full Stack (Frontend + Backend)
 
 ```bash
-# Set secrets
-npx wrangler secret put GOOGLE_API_KEY
+# 1. Clone repository
+git clone https://github.com/henrysammarfo/Genesis.git
+cd Genesis
 
-# Deploy
-npx wrangler deploy
+# 2. Install dependencies
+npm install
+
+# 3. Set up environment variables
+# Create .env.local with:
+GEMINI_API_KEY=your_google_api_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+TAVILY_API_KEY=your_tavily_key
+DEPLOYER_PRIVATE_KEY=your_ethereum_private_key
+ENCRYPTION_KEY=your_encryption_key
+
+# 4. Run database migrations (in Supabase SQL Editor)
+# Execute: supabase/migrations/000_complete_schema.sql
+
+# 5. Start frontend
+npm run dev
+# Open http://localhost:3000
+
+# 6. In another terminal, start backend
+cd genesis-nullshot-worker
+npm run dev
 ```
 
 ---
@@ -250,6 +374,7 @@ Analyzes smart contract code for security vulnerabilities.
 
 **Output:**
 - Security analysis with identified issues and recommendations
+- Checks for: reentrancy, unsafe calls, tx.origin usage, missing guards
 
 ### 2. `verify_source`
 Generates Etherscan verification URL for a contract.
@@ -299,12 +424,27 @@ curl -X POST http://localhost:8787/agent/chat/my-session `
   -H "Content-Type: application/json" `
   -d '{
     "messages": [
-      {"role": "user", "content": "Explain the difference between ERC20 and ERC721"}
+      {"role": "user", "content": "Explain the difference between ERC20 and ERC721 with code examples"}
     ]
   }'
 ```
 
-**Result:** Streaming AI response explaining token standards
+**Result:** Streaming AI response explaining token standards with Solidity code
+
+---
+
+## ⚠️ Important Notes
+
+### API Rate Limits
+- **Deployed version:** Uses our free-tier Google API key (limited requests)
+- **Local testing:** Use YOUR own API key for unlimited testing!
+- **Get free API key:** https://aistudio.google.com/apikey
+
+### For Judges
+- ✅ **Recommended:** Test backend locally with your own API key (Option 1)
+- ✅ **Alternative:** Test full stack locally or use deployed version (Option 2)
+- ✅ **No limits:** When using your own Google API key
+- ⚠️ **Rate limits:** Only apply to our deployed demo
 
 ---
 
@@ -326,10 +466,13 @@ Genesis is built on the NullShot framework, leveraging:
 - ✅ Security analysis tool
 - ✅ Source verification tool
 - ✅ Streaming responses
-- 🔄 Frontend deployment
+- ✅ Frontend dashboard
+- ✅ User authentication
+- ✅ Project management
 - 🔄 Additional MCP tools (web search, document processing)
 - 🔄 Multi-chain support
 - 🔄 Advanced code generation
+- 🔄 Automated testing
 
 ---
 
@@ -339,6 +482,8 @@ Genesis is built on the NullShot framework, leveraging:
 - Input sanitization and validation
 - Rate limiting on endpoints
 - Automated security scanning of generated contracts
+- Supabase RLS policies
+- Encrypted user credentials
 
 ---
 
@@ -348,17 +493,20 @@ Genesis is built on the NullShot framework, leveraging:
 - Test AI-powered Web3 assistance via simple API calls
 - Get instant security analysis of smart contracts
 - Learn best practices from AI-generated code
+- Use your own API key for unlimited testing
 
 **For Judges:**
 - ✅ Easy to test locally - just `npm run dev`
-- ✅ No complex setup required
+- ✅ Use your own API key - no rate limits
+- ✅ Test backend OR full stack
 - ✅ Clear API documentation
-- ✅ Works without frontend deployment
+- ✅ Real functionality - no mocks!
 
 **For the Ecosystem:**
 - Democratizes Web3 development through AI
 - Promotes security best practices
 - MCP protocol enables interoperability
+- Open source and extensible
 
 ---
 
@@ -385,10 +533,12 @@ Built for **NullShot Hacks S0** and **DoraHacks BUIDL** programs.
 - [Google Gemini](https://deepmind.google/technologies/gemini/) - AI model
 - [Cloudflare Workers](https://workers.cloudflare.com/) - Edge computing
 - [Model Context Protocol](https://modelcontextprotocol.io/) - Tool interoperability
+- [Next.js](https://nextjs.org/) - React framework
+- [Supabase](https://supabase.com/) - Database and auth
 - [Hono](https://hono.dev/) - Web framework
 
 ---
 
 **Made with ❤️ by the Genesis Team**
 
-> **Note for Judges:** The backend is fully functional and can be tested locally with `npm run dev` in the `genesis-nullshot-worker` directory. No frontend or cloud deployment required for testing core functionality!
+> **Note for Judges:** For the best testing experience with no rate limits, use Option 1 (backend testing) with your own Google API key. The backend is fully functional and demonstrates all core features. Frontend is available for full UI experience!

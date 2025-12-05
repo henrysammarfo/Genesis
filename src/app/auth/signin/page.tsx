@@ -16,6 +16,8 @@ export default function SignInPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isGithubLoading, setIsGithubLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
 
@@ -48,23 +50,32 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     setError("")
-    setIsLoading(true)
+
+    if (provider === 'google') {
+      setIsGoogleLoading(true)
+    } else {
+      setIsGithubLoading(true)
+    }
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
+          skipBrowserRedirect: false,
         }
       })
 
       if (error) {
         setError(error.message)
-        setIsLoading(false)
+        setIsGoogleLoading(false)
+        setIsGithubLoading(false)
       }
+      // Don't set loading to false on success - user will be redirected
     } catch (err: any) {
       setError(err.message || "An error occurred")
-      setIsLoading(false)
+      setIsGoogleLoading(false)
+      setIsGithubLoading(false)
     }
   }
 
@@ -102,9 +113,9 @@ export default function SignInPage() {
                 variant="outline"
                 className="w-full"
                 onClick={() => handleOAuthSignIn('google')}
-                disabled={isLoading}
+                disabled={isGoogleLoading || isGithubLoading || isLoading}
               >
-                {isLoading ? (
+                {isGoogleLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
@@ -122,9 +133,9 @@ export default function SignInPage() {
                 variant="outline"
                 className="w-full"
                 onClick={() => handleOAuthSignIn('github')}
-                disabled={isLoading}
+                disabled={isGoogleLoading || isGithubLoading || isLoading}
               >
-                {isLoading ? (
+                {isGithubLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">

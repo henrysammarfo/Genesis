@@ -37,8 +37,14 @@ When users describe what they want to build, guide them through the process.`,
             // Return the text stream response as Response object
             // Use toTextStreamResponse for edge runtime compatibility
             return result.toTextStreamResponse();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error in GenesisAgent:', error);
+            
+            // Handle API key errors with user-friendly messages
+            if (error?.message?.includes('leaked') || error?.message?.includes('API key')) {
+                throw new Error('Google AI API key is invalid or has been revoked. Please update your GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY in your .env.local file with a valid API key.');
+            }
+            
             throw error;
         }
     }

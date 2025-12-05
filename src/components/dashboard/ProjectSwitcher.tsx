@@ -63,7 +63,7 @@ export function ProjectSwitcher({ onProjectSelect, currentProjectId }: ProjectSw
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between px-2">
-                <span className="text-sm font-semibold text-muted-foreground">Projects</span>
+                <span className="text-sm font-semibold text-gray-300">Projects</span>
                 <Button
                     variant="ghost"
                     size="sm"
@@ -81,6 +81,7 @@ export function ProjectSwitcher({ onProjectSelect, currentProjectId }: ProjectSw
                         onChange={(e) => setNewProjectName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
                         autoFocus
+                        className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                     />
                     <div className="flex gap-2">
                         <Button
@@ -111,14 +112,14 @@ export function ProjectSwitcher({ onProjectSelect, currentProjectId }: ProjectSw
                         key={project.id}
                         className={`
               flex items-center justify-between px-2 py-2 rounded cursor-pointer
-              hover:bg-accent transition-colors group
-              ${currentProjectId === project.id ? 'bg-accent' : ''}
+              hover:bg-gray-800 transition-colors group
+              ${currentProjectId === project.id ? 'bg-gray-800 border-l-2 border-purple-500' : ''}
             `}
                         onClick={() => onProjectSelect(project.id)}
                     >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <Folder className="w-4 h-4 flex-shrink-0" />
-                            <span className="text-sm truncate">{project.name}</span>
+                            <Folder className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                            <span className="text-sm truncate text-gray-300">{project.name}</span>
                         </div>
                         <Button
                             variant="ghost"
@@ -133,7 +134,7 @@ export function ProjectSwitcher({ onProjectSelect, currentProjectId }: ProjectSw
             </div>
 
             {projects.length === 0 && !showNewProject && (
-                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                <div className="px-2 py-4 text-center text-sm text-gray-500">
                     No projects yet. Click + to create one.
                 </div>
             )}

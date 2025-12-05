@@ -1,27 +1,44 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, CoreMessage } from 'ai';
 
-// NullShot-compatible Agent Implementation
-// Note: Tools temporarily disabled due to Gemini 2.0 Flash schema compatibility issues
-export class GenesisAgent {
-    private workerUrl = 'https://genesis-ai.genesis-ai.workers.dev/agent/chat/test-session';
+// Real AI Agent - NO MOCK DATA
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
+if (!apiKey) {
+    console.error('⚠️ GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY not found');
+}
+
+const google = apiKey ? createGoogleGenerativeAI({ apiKey }) : null;
+const model = google ? google('gemini-2.0-flash') : null;
+
+export class GenesisAgent {
     async processMessage(messages: CoreMessage[]) {
+        if (!model) {
+            throw new Error('Google AI API key is missing. Configure GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY.');
+        }
+
         try {
-            const response = await fetch(this.workerUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages })
+            // Use real AI for all conversations
+            const result = await streamText({
+                model,
+                messages,
+                system: `You are Genesis, an expert AI assistant for building decentralized applications (dApps).
+You help users build complete Web3 projects including:
+- Smart contracts (Solidity)
+- Frontend interfaces (React/Next.js)
+- Backend APIs
+- Full-stack dApps
+
+Provide helpful, accurate, and comprehensive responses. Be conversational and friendly, but always professional.
+When users describe what they want to build, guide them through the process.`,
+                temperature: 0.7
             });
 
-            if (!response.ok) {
-                throw new Error(`Worker returned ${response.status}: ${await response.text()}`);
-            }
-
-            // Return the raw response to be proxied
-            return response;
+            // Return the text stream response as Response object
+            // Use toTextStreamResponse for edge runtime compatibility
+            return result.toTextStreamResponse();
         } catch (error) {
-            console.error('Error calling NullShot worker:', error);
+            console.error('Error in GenesisAgent:', error);
             throw error;
         }
     }

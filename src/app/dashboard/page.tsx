@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
 import { ProjectSwitcher } from "@/components/dashboard/ProjectSwitcher"
 import { useProjects, useProjectMessages, useProjectFiles } from "@/hooks/useProjects"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 
 interface ProjectFile {
     name: string
@@ -142,6 +143,33 @@ export default function Dashboard() {
                 .order('created_at', { ascending: true })
 
             if (msgs && msgs.length > 0) {
+                // Check for plan messages and set the plan
+                const planMessage = msgs.find(m => m.metadata?.type === 'plan')
+                if (planMessage && planMessage.content) {
+                    // Try to parse plan from content (it's a text string, we'll parse it into structure)
+                    // For now, we'll just set a basic plan structure
+                    try {
+                        const planText = planMessage.content
+                        // Simple parsing - look for steps and components in the text
+                        const stepMatches = planText.match(/(?:^|\n)\d+\.\s*([^\n]+)/g)
+                        const steps = stepMatches ? stepMatches.map((s: string) => s.replace(/^\d+\.\s*/, '').trim()) : []
+                        
+                        // Extract components mentioned
+                        const componentMatches = planText.match(/(?:contracts?|frontend|backend|components?):\s*([^\n]+)/gi)
+                        const components = componentMatches ? componentMatches.map((c: string) => c.split(':')[1]?.trim()).filter(Boolean) : []
+                        
+                        if (steps.length > 0 || components.length > 0) {
+                            setCurrentPlan({
+                                steps: steps.length > 0 ? steps : ['Review the plan below'],
+                                components: components.length > 0 ? components : ['Project Structure'],
+                                estimatedTime: '15-20 minutes'
+                            })
+                        }
+                    } catch (e) {
+                        console.error('Error parsing plan:', e)
+                    }
+                }
+                
                 setMessages(msgs.map(m => ({
                     role: m.role as 'user' | 'assistant',
                     content: m.content,
@@ -193,28 +221,192 @@ export default function Dashboard() {
             return
         }
 
-        const userMessage = prompt.trim()
+        const userMessageOriginal = prompt.trim()
         setPrompt("")
-        setMessages(prev => [...prev, { role: 'user', content: userMessage, timestamp: new Date() }])
+        
+        // Save user message to database first
+        await supabase.from('project_messages').insert({
+            project_id: currentProjectId,
+            role: 'user',
+            content: userMessageOriginal
+        })
+        
+        setMessages(prev => [...prev, { role: 'user', content: userMessageOriginal, timestamp: new Date() }])
+
+        // Check if this is a dApp build request or regular conversation
+        const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace']
+        const isBuildRequest = buildKeywords.some(keyword => userMessageOriginal.toLowerCase().includes(keyword))
+        
+        if (!isBuildRequest) {
+            // Regular conversation - use real AI agent
+            setIsGenerating(true)
+            setStatus('IDLE')
+            
+            try {
+                // Get conversation history
+                const { data: previousMessages } = await supabase
+                    .from('project_messages')
+                    .select('role, content')
+                    .eq('project_id', currentProjectId)
+                    .order('created_at', { ascending: true })
+                    .limit(20)
+                
+                const conversationHistory = (previousMessages || []).map(m => ({
+                    role: m.role === 'user' ? 'user' : 'assistant',
+                    content: m.content
+                }))
+                
+                // Add current message
+                conversationHistory.push({
+                    role: 'user',
+                    content: userMessageOriginal
+                })
+                
+                // Call real AI agent API
+                const response = await fetch('/api/agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: conversationHistory })
+                })
+                
+                if (!response.ok) {
+                    throw new Error('Failed to get AI response')
+                }
+                
+                // Stream the response
+                const reader = response.body?.getReader()
+                const decoder = new TextDecoder()
+                let assistantMessage = ''
+                
+                if (reader) {
+                    while (true) {
+                        const { done, value } = await reader.read()
+                        if (done) break
+                        
+                        const chunk = decoder.decode(value, { stream: true })
+                        assistantMessage += chunk
+                        
+                        // Update streaming text in real-time
+                        setStreamingText(assistantMessage)
+                    }
+                    
+                    // Save complete message to database
+                    await supabase.from('project_messages').insert({
+                        project_id: currentProjectId,
+                        role: 'assistant',
+                        content: assistantMessage
+                    })
+                    
+                    setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage, timestamp: new Date() }])
+                    setStreamingText('')
+                }
+            } catch (error: any) {
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: `❌ Error: ${error.message || 'Failed to get response'}`,
+                    timestamp: new Date()
+                }])
+            } finally {
+                setIsGenerating(false)
+            }
+            return
+        }
 
         setIsGenerating(true)
-        setStatus('GENERATING')
+        setStatus('PLANNING')
 
         try {
-            // Call real build API with project ID
+            // Call real build API with project ID - it will search web, generate plan, then code
             const response = await fetch('/api/build', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    prompt: userMessage,
-                    projectId: currentProjectId
+                    prompt: userMessageOriginal,
+                    projectId: currentProjectId,
+                    useSearch: true // Enable web search for inspiration
                 })
             })
 
             const data = await response.json()
 
-            if (data.success) {
-                // Calculate total files generated
+            if (!response.ok || !data.success) {
+                let errorMessage = data.error || 'Generation failed. Please try again.'
+                
+                // Handle API key errors specifically
+                if (errorMessage.includes('API key') || errorMessage.includes('GOOGLE_GENERATIVE_AI_API_KEY')) {
+                    errorMessage = '⚠️ Google AI API key is missing. Please add GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY to your .env.local file.'
+                }
+                
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: `❌ Error: ${errorMessage}`,
+                    timestamp: new Date()
+                }])
+                setStatus('IDLE')
+                setIsGenerating(false)
+                return
+            }
+
+            // Handle plan generation response
+            if (data.planGenerated && data.plan) {
+                setStatus('IDLE')
+                setIsGenerating(false)
+                
+                // Store plan prompt for later code generation
+                const planPrompt = data.planPrompt
+                
+                // Check if ENV keys are needed
+                if (data.needsEnvKeys) {
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: `⚠️ ${data.message}\n\nPlease add your environment variables in Settings, then approve the plan to continue.`,
+                        timestamp: new Date()
+                    }])
+                }
+                
+                // Reload messages to get the plan message
+                const { data: msgs } = await supabase
+                    .from('project_messages')
+                    .select('*')
+                    .eq('project_id', currentProjectId)
+                    .order('created_at', { ascending: true })
+
+                if (msgs && msgs.length > 0) {
+                    // Check for plan messages and set the plan
+                    const planMessage = msgs.find(m => m.metadata?.type === 'plan')
+                    if (planMessage && planMessage.content) {
+                        try {
+                            const planText = planMessage.content
+                            const stepMatches = planText.match(/(?:^|\n)\d+\.\s*([^\n]+)/g)
+                            const steps = stepMatches ? stepMatches.map((s: string) => s.replace(/^\d+\.\s*/, '').trim()) : []
+                            
+                            const componentMatches = planText.match(/(?:contracts?|frontend|backend|components?):\s*([^\n]+)/gi)
+                            const components = componentMatches ? componentMatches.map((c: string) => c.split(':')[1]?.trim()).filter(Boolean) : []
+                            
+                            if (steps.length > 0 || components.length > 0) {
+                                setCurrentPlan({
+                                    steps: steps.length > 0 ? steps : ['Review the plan below'],
+                                    components: components.length > 0 ? components : ['Project Structure'],
+                                    estimatedTime: '15-20 minutes',
+                                    planPrompt: planPrompt // Store for approval
+                                } as Plan & { planPrompt?: string })
+                            }
+                        } catch (e) {
+                            console.error('Error parsing plan:', e)
+                        }
+                    }
+                    
+                    setMessages(msgs.map(m => ({
+                        role: m.role as 'user' | 'assistant',
+                        content: m.content,
+                        timestamp: new Date(m.created_at)
+                    })))
+                }
+                return
+            }
+
+            // Handle full project generation response
+            if (data.success && data.project) {
                 const filesGenerated = (data.project?.contracts?.length || 0) +
                     (data.project?.frontend?.length || 0) +
                     (data.project?.backend?.length || 0)
@@ -250,13 +442,6 @@ export default function Dashboard() {
                 }
 
                 setStatus('COMPLETE')
-            } else {
-                setMessages(prev => [...prev, {
-                    role: 'assistant',
-                    content: `❌ Error: ${data.error || 'Generation failed. Please try again.'}`,
-                    timestamp: new Date()
-                }])
-                setStatus('IDLE')
             }
         } catch (error: any) {
             setMessages(prev => [...prev, {
@@ -420,72 +605,11 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* Plan Display */}
-            {showPlan && currentPlan && (
-                <div className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-4">
-                    <Card className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-500/30">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-white">Development Plan</CardTitle>
-                                    <CardDescription className="text-gray-400">Estimated time: {currentPlan.estimatedTime}</CardDescription>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => { setShowPlan(false); setCurrentPlan(null); }}>
-                                    <CloseIcon className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-300 mb-3">Steps:</h4>
-                                    <ul className="space-y-2">
-                                        {currentPlan.steps.map((step, idx) => (
-                                            <li key={idx} className="flex items-start space-x-2 text-sm text-gray-400">
-                                                <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                                <span>{step}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-300 mb-3">Components:</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {currentPlan.components.map((component, idx) => (
-                                            <Badge key={idx} variant="outline" className="border-purple-500/30 bg-purple-500/10 text-purple-400">
-                                                {component}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 space-x-2">
-                                        <Button
-                                            className="bg-green-600 hover:bg-green-700"
-                                            onClick={() => {
-                                                setShowPlan(false)
-                                                handleSend()
-                                            }}
-                                        >
-                                            Approve & Start Building
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="border-gray-700"
-                                            onClick={() => setShowPlan(false)}
-                                        >
-                                            Make Changes
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
 
             {/* Main Content - Three Panels */}
-            <div className="flex-1 flex overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
                 {/* Left Panel - Projects & Explorer */}
-                <div className="w-64 border-r border-gray-800 bg-[#0f0f0f] flex flex-col">
+                <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="border-r border-gray-800 bg-[#0f0f0f] flex flex-col">
                     {/* Project Switcher */}
                     <div className="p-4 border-b border-gray-800">
                         <ProjectSwitcher
@@ -594,10 +718,12 @@ export default function Dashboard() {
                             </div>
                         )}
                     </div>
-                </div>
+                </ResizablePanel>
+
+                <ResizableHandle withHandle />
 
                 {/* Middle Panel - Command Center (AI-1) */}
-                <div className="flex-1 border-r border-gray-800 bg-[#0a0a0a] flex flex-col">
+                <ResizablePanel defaultSize={50} minSize={30} className="border-r border-gray-800 bg-[#0a0a0a] flex flex-col">
                     <div className="p-4 border-b border-gray-800">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
@@ -609,6 +735,145 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {/* Plan Display - Integrated into scrollable chat */}
+                        {currentPlan && (
+                            <div className="flex justify-start">
+                                <Card className="max-w-[90%] bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-500/30">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-white text-sm">Development Plan</CardTitle>
+                                                <CardDescription className="text-gray-400 text-xs">Estimated time: {currentPlan.estimatedTime}</CardDescription>
+                                            </div>
+                                            <Button variant="ghost" size="sm" onClick={() => { setCurrentPlan(null); }}>
+                                                <CloseIcon className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <h4 className="text-xs font-semibold text-gray-300 mb-2">Steps:</h4>
+                                            <ul className="space-y-1">
+                                                {currentPlan.steps.map((step, idx) => (
+                                                    <li key={idx} className="flex items-start space-x-2 text-xs text-gray-400">
+                                                        <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                        <span>{step}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-semibold text-gray-300 mb-2">Components:</h4>
+                                            <div className="flex flex-wrap gap-1">
+                                                {currentPlan.components.map((component, idx) => (
+                                                    <Badge key={idx} variant="outline" className="border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs">
+                                                        {component}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex space-x-2 pt-2">
+                                            <Button
+                                                size="sm"
+                                                className="bg-green-600 hover:bg-green-700 text-xs h-7"
+                                                onClick={async () => {
+                                                    const planData = currentPlan as Plan & { planPrompt?: string }
+                                                    if (!planData?.planPrompt) {
+                                                        setMessages(prev => [...prev, {
+                                                            role: 'assistant',
+                                                            content: '❌ Error: Plan prompt not found. Please regenerate the plan.',
+                                                            timestamp: new Date()
+                                                        }])
+                                                        setCurrentPlan(null)
+                                                        return
+                                                    }
+                                                    
+                                                    setCurrentPlan(null)
+                                                    setIsGenerating(true)
+                                                    setStatus('GENERATING')
+                                                    
+                                                    try {
+                                                        // Call code generation endpoint
+                                                        const response = await fetch('/api/build/generate', {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                                projectId: currentProjectId,
+                                                                planPrompt: planData.planPrompt
+                                                            })
+                                                        })
+                                                        
+                                                        const data = await response.json()
+                                                        
+                                                        if (!response.ok || !data.success) {
+                                                            throw new Error(data.error || 'Code generation failed')
+                                                        }
+                                                        
+                                                        // Reload files
+                                                        const { data: files } = await supabase
+                                                            .from('project_files')
+                                                            .select('*')
+                                                            .eq('project_id', currentProjectId)
+                                                            .order('created_at', { ascending: true })
+                                                        
+                                                        if (files && files.length > 0) {
+                                                            setProjectFiles(files.map(f => ({
+                                                                name: f.name,
+                                                                type: 'file' as const,
+                                                                content: f.content
+                                                            })))
+                                                            setSelectedFile(files[0].name)
+                                                            setGeneratedCode(files[0].content)
+                                                        }
+                                                        
+                                                        // Reload messages
+                                                        const { data: msgs } = await supabase
+                                                            .from('project_messages')
+                                                            .select('*')
+                                                            .eq('project_id', currentProjectId)
+                                                            .order('created_at', { ascending: true })
+                                                        
+                                                        if (msgs) {
+                                                            setMessages(msgs.map(m => ({
+                                                                role: m.role as 'user' | 'assistant',
+                                                                content: m.content,
+                                                                timestamp: new Date(m.created_at)
+                                                            })))
+                                                        }
+                                                        
+                                                        setStatus('COMPLETE')
+                                                        if (data.creditsRemaining !== undefined) {
+                                                            setCredits(data.creditsRemaining)
+                                                        }
+                                                    } catch (error: any) {
+                                                        setMessages(prev => [...prev, {
+                                                            role: 'assistant',
+                                                            content: `❌ Error: ${error.message || 'Code generation failed'}`,
+                                                            timestamp: new Date()
+                                                        }])
+                                                        setStatus('IDLE')
+                                                    } finally {
+                                                        setIsGenerating(false)
+                                                    }
+                                                }}
+                                            >
+                                                Approve & Start Building
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-gray-700 text-xs h-7"
+                                                onClick={() => setCurrentPlan(null)}
+                                            >
+                                                Make Changes
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )}
+                        
+                        {/* Messages */}
                         {messages.map((message, index) => (
                             <div
                                 key={index}
@@ -658,10 +923,12 @@ export default function Dashboard() {
                             </Button>
                         </div>
                     </div>
-                </div>
+                </ResizablePanel>
+
+                <ResizableHandle withHandle />
 
                 {/* Right Panel - Code Viewer */}
-                <div className="w-96 bg-[#0f0f0f] flex flex-col">
+                <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="bg-[#0f0f0f] flex flex-col">
                     <div className="p-4 border-b border-gray-800">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-semibold text-gray-300">Code Viewer</h2>
@@ -704,8 +971,8 @@ export default function Dashboard() {
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
+                </ResizablePanel>
+            </ResizablePanelGroup>
         </div>
     )
 }

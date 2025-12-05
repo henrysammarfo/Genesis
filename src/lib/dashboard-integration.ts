@@ -3,7 +3,7 @@
  * Connects dashboard to real Supabase data - NO MOCK DATA
  */
 
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 export interface DashboardProject {
     id: string;
@@ -35,7 +35,6 @@ export interface DashboardFile {
  * Fetch user's credits from Supabase
  */
 export async function fetchUserCredits(): Promise<number> {
-    const supabase = createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return 0;
@@ -53,7 +52,6 @@ export async function fetchUserCredits(): Promise<number> {
  * Fetch all projects for current user
  */
 export async function fetchProjects(): Promise<DashboardProject[]> {
-    const supabase = createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
@@ -72,7 +70,6 @@ export async function fetchProjects(): Promise<DashboardProject[]> {
  * Fetch messages for a specific project
  */
 export async function fetchProjectMessages(projectId: string): Promise<DashboardMessage[]> {
-    const supabase = createClient();
 
     const { data: messages } = await supabase
         .from('project_messages')
@@ -87,7 +84,6 @@ export async function fetchProjectMessages(projectId: string): Promise<Dashboard
  * Fetch files for a specific project
  */
 export async function fetchProjectFiles(projectId: string): Promise<DashboardFile[]> {
-    const supabase = createClient();
 
     const { data: files } = await supabase
         .from('project_files')
@@ -102,7 +98,6 @@ export async function fetchProjectFiles(projectId: string): Promise<DashboardFil
  * Create a new project
  */
 export async function createProject(name: string, description?: string): Promise<DashboardProject | null> {
-    const supabase = createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -130,7 +125,6 @@ export async function addProjectMessage(
     content: string,
     metadata?: any
 ): Promise<DashboardMessage | null> {
-    const supabase = createClient();
 
     const { data: message } = await supabase
         .from('project_messages')
@@ -156,7 +150,6 @@ export async function addProjectMessage(
  * Delete a project
  */
 export async function deleteProject(projectId: string): Promise<boolean> {
-    const supabase = createClient();
 
     const { error } = await supabase
         .from('projects')
@@ -170,7 +163,6 @@ export async function deleteProject(projectId: string): Promise<boolean> {
  * Subscribe to real-time credit updates
  */
 export function subscribeToCredits(userId: string, callback: (credits: number) => void) {
-    const supabase = createClient();
 
     const channel = supabase
         .channel('credits-changes')
@@ -197,7 +189,6 @@ export function subscribeToCredits(userId: string, callback: (credits: number) =
  * Subscribe to real-time project file updates
  */
 export function subscribeToProjectFiles(projectId: string, callback: (files: DashboardFile[]) => void) {
-    const supabase = createClient();
 
     const channel = supabase
         .channel(`project-files-${projectId}`)

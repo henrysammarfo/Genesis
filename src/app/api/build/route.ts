@@ -88,100 +88,26 @@ export async function POST(req: NextRequest) {
       metadata: { type: 'plan', searchUsed: useSearch }
     });
 
-    // 7. If streaming, return plan and wait for approval
-    if (stream) {
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        async start(controller) {
-          // Send plan
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-            type: 'plan',
-            content: plan
-          })}\n\n`));
+    // 7. Check if user has ENV keys configured
+    const { data: envVars } = await supabase
+      .from('user_env_vars')
+      .select('key')
+      .eq('user_id', userId)
+      .limit(1);
 
-          controller.close();
-        }
-      });
+    const hasEnvKeys = envVars && envVars.length > 0;
 
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    }
-
-    // 8. Non-streaming: generate full project
-    const fullStackProject = await generateFullStackDApp(planPrompt);
-
-    // 9. Calculate credits (based on complexity)
-    const totalFiles =
-      fullStackProject.contracts.length +
-      fullStackProject.frontend.length +
-      fullStackProject.backend.length +
-      fullStackProject.config.length;
-
-    const creditsUsed = Math.max(10, Math.ceil(totalFiles * 2));
-
-    if (profile.credits < creditsUsed) {
-      return NextResponse.json({
-        success: false,
-        error: `Insufficient credits. Required: ${creditsUsed}, Available: ${profile.credits}`
-      }, { status: 402 });
-    }
-
-    // 10. Deduct credits
-    await supabase
-      .from('profiles')
-      .update({ credits: profile.credits - creditsUsed })
-      .eq('id', userId);
-
-    await supabase.from('credit_transactions').insert({
-      user_id: userId,
-      amount: -creditsUsed,
-      type: 'deduct',
-      description: `Full-stack dApp generation: "${prompt.substring(0, 50)}..."`
-    });
-
-    // 11. Save all generated files to project
-    const allFiles = [
-      ...fullStackProject.contracts,
-      ...fullStackProject.frontend,
-      ...fullStackProject.backend,
-      ...fullStackProject.config
-    ];
-
-    for (const file of allFiles) {
-      await supabase.from('project_files').insert({
-        project_id: projectId,
-        name: file.name,
-        path: file.path,
-        content: file.content,
-        type: file.type || 'other',
-        language: file.language,
-        size_bytes: file.content.length
-      });
-    }
-
-    // 12. Save README
-    await supabase.from('project_files').insert({
-      project_id: projectId,
-      name: 'README.md',
-      path: 'README.md',
-      content: fullStackProject.readme,
-      type: 'documentation',
-      language: 'markdown',
-      size_bytes: fullStackProject.readme.length
-    });
-
-    // 13. Return success
+    // 8. Return plan and indicate if ENV keys are needed
     return NextResponse.json({
       success: true,
-      project: fullStackProject,
-      creditsUsed,
-      creditsRemaining: profile.credits - creditsUsed,
-      message: 'Full-stack dApp generated successfully!'
+      plan: plan,
+      planGenerated: true,
+      planPrompt: planPrompt, // Store for code generation
+      requiresApproval: true,
+      needsEnvKeys: !hasEnvKeys,
+      message: hasEnvKeys 
+        ? 'Plan generated! Please review and approve to continue with code generation.'
+        : 'Plan generated! Before generating code, please configure your environment variables (API keys) in Settings.'
     });
 
   } catch (error: any) {

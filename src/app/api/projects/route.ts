@@ -13,12 +13,29 @@ export async function GET(req: NextRequest) {
         }
 
         // Get all projects for user
-        const { data: projects, error } = await supabase
+        // Try with status filter first, if it fails (column doesn't exist), try without it
+        let { data: projects, error } = await supabase
             .from('projects')
             .select('*')
             .eq('user_id', user.id)
             .eq('status', 'active')
             .order('updated_at', { ascending: false });
+        
+        // If error about status column, retry without status filter
+        if (error && (error.message?.includes('column') || error.message?.includes('status'))) {
+            const retryResult = await supabase
+                .from('projects')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false });
+            projects = retryResult.data;
+            error = retryResult.error;
+            
+            // Filter by status in memory if status column exists
+            if (projects && projects.length > 0 && projects[0]?.status !== undefined) {
+                projects = projects.filter(p => !p.status || p.status === 'active');
+            }
+        }
 
         if (error) {
             console.error('Error fetching projects:', error);
@@ -77,16 +94,40 @@ export async function POST(req: NextRequest) {
 
         // Create new project using ADMIN CLIENT (bypasses RLS)
         console.log('🔵 Attempting to insert project with admin client...');
-        const { data: project, error } = await supabaseAdmin
+        
+        // Try with description/status first (newer schema), then fall back to prompt (older schema)
+        let projectData: any = {
+            user_id: user.id,
+            name,
+            description: description || '',
+            status: 'active'
+        };
+        
+        let { data: project, error } = await supabaseAdmin
             .from('projects')
-            .insert({
-                user_id: user.id,
-                name,
-                description: description || '',
-                status: 'active'
-            })
+            .insert(projectData)
             .select()
             .single();
+        
+        // If that fails, try with prompt instead (older schema compatibility)
+        if (error && error.message?.includes('column') && error.message?.includes('description')) {
+            console.log('🔵 Retrying with prompt field (older schema)...');
+            projectData = {
+                user_id: user.id,
+                name,
+                prompt: description || '',
+                status: 'active'
+            };
+            
+            const retryResult = await supabaseAdmin
+                .from('projects')
+                .insert(projectData)
+                .select()
+                .single();
+                
+            project = retryResult.data;
+            error = retryResult.error;
+        }
 
         if (error) {
             console.error('🔴 Error creating project:', error);

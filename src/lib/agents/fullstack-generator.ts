@@ -1,6 +1,16 @@
 import { generateText } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
+// Initialize model with API key from environment
+// Support both GEMINI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY for compatibility
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+if (!apiKey) {
+    console.error('⚠️ GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY not found in environment variables');
+    throw new Error('Google Generative AI API key is missing. Pass it using the GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY environment variable.');
+}
+
+const google = createGoogleGenerativeAI({ apiKey });
 const model = google('gemini-2.0-flash-exp');
 
 export interface FullStackProject {

@@ -1,5 +1,5 @@
 import { genesisAgent } from '@/lib/agents/nullshot-agent';
-import { convertToCoreMessages } from 'ai';
+import { CoreMessage } from 'ai';
 import { verifyAuth } from '@/lib/auth';
 import { AgentMessageSchema, checkRateLimit, sanitizeError } from '@/lib/validation';
 import { logger } from '@/lib/logger';
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         const validation = AgentMessageSchema.safeParse(body);
 
         if (!validation.success) {
-            logger.warn('Invalid agent request', { userId, requestId, errors: validation.error.errors });
+            logger.warn('Invalid agent request', { userId, requestId, errors: validation.error.issues });
             return new Response(JSON.stringify({
                 error: 'Invalid request data'
             }), {
@@ -55,16 +55,16 @@ export async function POST(req: Request) {
 
         logger.info('Agent request received', { userId, requestId, messageCount: messages.length });
 
-        const response = await genesisAgent.processMessage(convertToCoreMessages(messages));
+        // Convert messages to CoreMessage format - ensure proper structure
+        const coreMessages: CoreMessage[] = messages.map((msg: { role: string; content: string }) => ({
+            role: msg.role as 'user' | 'assistant' | 'system',
+            content: msg.content
+        }));
 
-        // Proxy the worker's streaming response directly
-        return new Response(response.body, {
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-                'X-RateLimit-Remaining': rateLimit.remaining.toString()
-            },
-        });
+        const response = await genesisAgent.processMessage(coreMessages);
+
+        // Return the streaming response
+        return response;
     } catch (error) {
         logger.error('Agent API error', { requestId, error });
         return new Response(JSON.stringify({

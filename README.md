@@ -5,13 +5,22 @@
 
 An AI-powered platform that transforms natural language into production-ready decentralized applications. Built on the NullShot framework with integrated MCP (Model Context Protocol) servers, Genesis leverages Google Gemini 2.0 Flash to provide intelligent Web3 development assistance.
 
+**🌐 Live Demo:** https://genesis-nullshot.vercel.app/
+
 ---
 
 ## 🎯 For Judges: Testing Options
 
-**Genesis offers TWO ways to test - choose what works best for you:**
+**Genesis offers THREE ways to test - choose what works best for you:**
 
-### Option 1: Test Backend Only (Recommended - No Limits!)
+### Option 1: Live Demo (Quick Preview)
+**URL:** https://genesis-nullshot.vercel.app/
+
+Try the full UI and features! 
+
+> **⚠️ Note:** The live demo uses our free-tier Google API key which has rate limits. For unlimited testing, use Option 2 or 3 with your own API key.
+
+### Option 2: Test Backend Only (Recommended - No Limits!)
 
 Test the AI Agent and MCP Server directly via API using **your own Google API key** (no rate limits!):
 
@@ -42,11 +51,11 @@ curl http://localhost:8787/health
 - ✅ No deployment needed
 - ✅ Full control
 
-### Option 2: Test Full Stack (Frontend + Backend)
+### Option 3: Test Full Stack Locally (Frontend + Backend)
 
-> **⚠️ Note:** The deployed version uses our free-tier API key which has rate limits. For unlimited testing, use Option 1 with your own API key!
+**Live Demo:** https://genesis-nullshot.vercel.app/
 
-**Live Demo:** [Your deployed URL here]
+> **⚠️ Note:** The live demo uses our free-tier API key (rate limits apply). For unlimited testing, use Option 2 with your own API key!
 
 **OR run locally with full UI:**
 

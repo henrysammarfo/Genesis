@@ -247,9 +247,32 @@ export default function Dashboard() {
         setMessages(prev => [...prev, { role: 'user', content: userMessageOriginal, timestamp: new Date() }])
 
         // Check if this is a dApp build request or regular conversation
-        // Auto-detect build requests - if user says "create", "build", "make", "generate" + dApp-related terms
-        const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace', 'staking', 'swap', 'lending']
-        const isBuildRequest = buildKeywords.some(keyword => userMessageOriginal.toLowerCase().includes(keyword))
+        // Auto-detect build requests - be more aggressive in detection
+        const lowerMessage = userMessageOriginal.toLowerCase().trim()
+        const buildKeywords = ['build', 'create', 'make', 'generate', 'dapp', 'contract', 'smart contract', 'nft', 'token', 'dao', 'defi', 'marketplace', 'staking', 'swap', 'lending', 'app', 'application']
+        const buildActionWords = ['create', 'build', 'make', 'generate', 'do it', 'start', 'go']
+        
+        // Check if message contains build keywords OR is a short affirmative response
+        // Also check if previous messages suggest a build context
+        const hasBuildKeyword = buildKeywords.some(keyword => lowerMessage.includes(keyword))
+        const isShortAffirmative = buildActionWords.some(word => 
+            lowerMessage === word || 
+            lowerMessage === `${word} it` || 
+            lowerMessage.startsWith(`${word} `) ||
+            lowerMessage === 'yes' ||
+            lowerMessage === 'ok' ||
+            lowerMessage === 'okay' ||
+            lowerMessage === 'sure'
+        )
+        
+        // Check recent messages for build context
+        const recentMessages = messages.slice(-3).map(m => m.content.toLowerCase())
+        const hasBuildContext = recentMessages.some(msg => 
+            buildKeywords.some(keyword => msg.includes(keyword)) ||
+            msg.includes('create') || msg.includes('build') || msg.includes('make')
+        )
+        
+        const isBuildRequest = hasBuildKeyword || (isShortAffirmative && hasBuildContext)
         
         // If it's a build request, automatically start the build process IMMEDIATELY
         if (isBuildRequest) {

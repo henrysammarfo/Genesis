@@ -64,7 +64,7 @@ export default function SignUpPage() {
           data: {
             full_name: name,
           },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       })
 
@@ -102,8 +102,7 @@ export default function SignUpPage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          skipBrowserRedirect: false,
+          redirectTo: `${window.location.origin}/auth/callback`,
         }
       })
 

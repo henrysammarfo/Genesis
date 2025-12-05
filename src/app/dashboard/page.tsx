@@ -251,15 +251,18 @@ export default function Dashboard() {
                     .order('created_at', { ascending: true })
                     .limit(20)
                 
-                const conversationHistory = (previousMessages || []).map(m => ({
-                    role: m.role === 'user' ? 'user' : 'assistant',
-                    content: m.content
-                }))
+                // Filter out empty messages and build conversation history
+                const conversationHistory = (previousMessages || [])
+                    .filter(m => m.content && m.content.trim().length > 0)
+                    .map(m => ({
+                        role: m.role === 'user' ? 'user' : 'assistant',
+                        content: m.content.trim()
+                    }))
                 
                 // Add current message
                 conversationHistory.push({
                     role: 'user',
-                    content: userMessageOriginal
+                    content: userMessageOriginal.trim()
                 })
                 
                 // Call real AI agent API

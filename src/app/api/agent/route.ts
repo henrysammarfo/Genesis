@@ -55,11 +55,27 @@ export async function POST(req: Request) {
 
         logger.info('Agent request received', { userId, requestId, messageCount: messages.length });
 
-        // Convert messages to CoreMessage format - ensure proper structure
-        const coreMessages: CoreMessage[] = messages.map((msg: { role: string; content: string }) => ({
-            role: msg.role as 'user' | 'assistant' | 'system',
-            content: msg.content
-        }));
+        // Convert messages to CoreMessage format - filter out empty messages and ensure proper structure
+        const coreMessages: CoreMessage[] = messages
+            .filter((msg: { role: string; content: string }) => {
+                // Filter out messages with empty or missing content
+                return msg.content && msg.content.trim().length > 0;
+            })
+            .map((msg: { role: string; content: string }) => ({
+                role: msg.role as 'user' | 'assistant' | 'system',
+                content: msg.content.trim()
+            }));
+
+        // Ensure we have at least one user message
+        if (coreMessages.length === 0 || !coreMessages.some(m => m.role === 'user')) {
+            logger.warn('No valid messages found', { userId, requestId });
+            return new Response(JSON.stringify({
+                error: 'No valid messages provided'
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
         const response = await genesisAgent.processMessage(coreMessages);
 

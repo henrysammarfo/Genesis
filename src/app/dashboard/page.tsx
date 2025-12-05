@@ -106,6 +106,54 @@ export default function Dashboard() {
     fetchUserData()
   }, [])
 
+  // Load project files and messages when project is selected
+  useEffect(() => {
+    async function loadProjectData() {
+      if (!currentProjectId) {
+        setProjectFiles([])
+        setMessages([{ role: 'assistant', content: 'Create or select a project to get started!', timestamp: new Date() }])
+        return
+      }
+
+      // Load files from database
+      const { data: files } = await supabase
+        .from('project_files')
+        .select('*')
+        .eq('project_id', currentProjectId)
+        .order('created_at', { ascending: true })
+
+      if (files && files.length > 0) {
+        setProjectFiles(files.map(f => ({
+          name: f.name,
+          type: 'file' as const,
+          content: f.content
+        })))
+        setSelectedFile(files[0].name)
+        setGeneratedCode(files[0].content)
+      } else {
+        setProjectFiles([])
+      }
+
+      // Load messages from database
+      const { data: msgs } = await supabase
+        .from('project_messages')
+        .select('*')
+        .eq('project_id', currentProjectId)
+        .order('created_at', { ascending: true })
+
+      if (msgs && msgs.length > 0) {
+        setMessages(msgs.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: new Date(m.created_at)
+        })))
+      } else {
+        setMessages([{ role: 'assistant', content: 'Genesis Online. Describe the dApp you want to build.', timestamp: new Date() }])
+      }
+    }
+    loadProjectData()
+  }, [currentProjectId])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
@@ -442,19 +490,24 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Name</label>
-                  <Input className="bg-gray-800 border-gray-700 text-white" defaultValue="John Doe" />
+                  <Input
+                    className="bg-gray-800 border-gray-700 text-white"
+                    value={userProfile?.name || 'Loading...'}
+                    readOnly
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Email</label>
-                  <Input className="bg-gray-800 border-gray-700 text-white" defaultValue="user@example.com" />
+                  <Input
+                    className="bg-gray-800 border-gray-700 text-white"
+                    value={userProfile?.email || 'Loading...'}
+                    readOnly
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Credits</label>
                   <div className="text-xl font-bold text-white">{credits.toLocaleString()}</div>
                 </div>
-                <Button className="bg-purple-600 hover:bg-purple-700">
-                  Save Changes
-                </Button>
               </div>
             </CardContent>
           </Card>

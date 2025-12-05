@@ -75,9 +75,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
         }
 
-        // Create new project
-        console.log('🔵 Attempting to insert project...');
-        const { data: project, error } = await supabase
+        // Create new project using ADMIN CLIENT (bypasses RLS)
+        console.log('🔵 Attempting to insert project with admin client...');
+        const { data: project, error } = await supabaseAdmin
             .from('projects')
             .insert({
                 user_id: user.id,

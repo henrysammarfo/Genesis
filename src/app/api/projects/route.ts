@@ -46,32 +46,25 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // ENSURE PROFILE EXISTS - Auto-create if missing
-        console.log('🔵 Checking if profile exists...');
-        const { data: existingProfile } = await supabase
+        // FORCE PROFILE CREATION using admin client (bypasses RLS)
+        console.log('🔵 Force creating profile with admin client...');
+        const { supabaseAdmin } = await import('@/lib/supabase/server');
+
+        const { error: profileError } = await supabaseAdmin
             .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .single();
+            .upsert({
+                id: user.id,
+                email: user.email,
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                credits: 100
+            }, {
+                onConflict: 'id'
+            });
 
-        if (!existingProfile) {
-            console.log('🟡 Profile not found, creating...');
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                    id: user.id,
-                    email: user.email,
-                    full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                    credits: 100
-                });
-
-            if (profileError) {
-                console.error('🔴 Failed to create profile:', profileError);
-                return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
-            }
-            console.log('✅ Profile created successfully');
+        if (profileError) {
+            console.error('🔴 Failed to upsert profile:', profileError);
         } else {
-            console.log('✅ Profile exists');
+            console.log('✅ Profile upserted successfully');
         }
 
         const body = await req.json();

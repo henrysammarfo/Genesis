@@ -56,6 +56,9 @@ interface Plan {
     steps: string[]
     components: string[]
     estimatedTime: string
+    creditsUsed?: number
+    creditsRemaining?: number
+    estimatedGenerationCredits?: number
 }
 
 export default function Dashboard() {
@@ -355,6 +358,11 @@ export default function Dashboard() {
                 setStatus('IDLE')
                 setIsGenerating(false)
                 
+                // Update credits from API response
+                if (data.creditsRemaining !== undefined) {
+                    setCredits(data.creditsRemaining)
+                }
+                
                 // Store plan prompt for later code generation
                 const planPrompt = data.planPrompt
                 
@@ -391,8 +399,11 @@ export default function Dashboard() {
                                     steps: steps.length > 0 ? steps : ['Review the plan below'],
                                     components: components.length > 0 ? components : ['Project Structure'],
                                     estimatedTime: '15-20 minutes',
-                                    planPrompt: planPrompt // Store for approval
-                                } as Plan & { planPrompt?: string })
+                                    planPrompt: planPrompt, // Store for approval
+                                    creditsUsed: data.creditsUsed,
+                                    creditsRemaining: data.creditsRemaining,
+                                    estimatedGenerationCredits: data.estimatedGenerationCredits
+                                } as Plan & { planPrompt?: string; creditsUsed?: number; creditsRemaining?: number; estimatedGenerationCredits?: number })
                             }
                         } catch (e) {
                             console.error('Error parsing plan:', e)
@@ -726,8 +737,8 @@ export default function Dashboard() {
                 <ResizableHandle withHandle />
 
                 {/* Middle Panel - Command Center (AI-1) */}
-                <ResizablePanel defaultSize={50} minSize={30} className="border-r border-gray-800 bg-[#0a0a0a] flex flex-col">
-                    <div className="p-4 border-b border-gray-800">
+                <ResizablePanel defaultSize={50} minSize={30} className="border-r border-gray-800 bg-[#0a0a0a] flex flex-col overflow-hidden">
+                    <div className="p-4 border-b border-gray-800 flex-shrink-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                                 <h2 className="text-sm font-semibold text-gray-300">Command Center</h2>
@@ -737,7 +748,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
                         {/* Plan Display - Integrated into scrollable chat */}
                         {currentPlan && (
                             <div className="flex justify-start">
@@ -746,7 +757,19 @@ export default function Dashboard() {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <CardTitle className="text-white text-sm">Development Plan</CardTitle>
-                                                <CardDescription className="text-gray-400 text-xs">Estimated time: {currentPlan.estimatedTime}</CardDescription>
+                                                <CardDescription className="text-gray-400 text-xs">
+                                                    Estimated time: {currentPlan.estimatedTime}
+                                                    {currentPlan.creditsUsed !== undefined && (
+                                                        <span className="block mt-1">
+                                                            Credits used: {currentPlan.creditsUsed} • Remaining: {currentPlan.creditsRemaining || credits}
+                                                            {currentPlan.estimatedGenerationCredits !== undefined && (
+                                                                <span className="block text-yellow-400">
+                                                                    Estimated {currentPlan.estimatedGenerationCredits} credits needed for generation
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </CardDescription>
                                             </div>
                                             <Button variant="ghost" size="sm" onClick={() => { setCurrentPlan(null); }}>
                                                 <CloseIcon className="h-3 w-3" />
@@ -902,7 +925,7 @@ export default function Dashboard() {
                         )}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className="border-t border-gray-800 p-4">
+                    <div className="border-t border-gray-800 p-4 flex-shrink-0">
                         <div className="flex space-x-2">
                             <Textarea
                                 value={prompt}
@@ -912,6 +935,10 @@ export default function Dashboard() {
                                 className="flex-1 bg-gray-900 border-gray-700 text-white resize-none"
                                 rows={3}
                                 disabled={isGenerating}
+                                onFocus={(e) => {
+                                    // Prevent page scroll when focusing textarea
+                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                }}
                             />
                             <Button
                                 onClick={handleSend}

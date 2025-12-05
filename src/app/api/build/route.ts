@@ -43,21 +43,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
     }
 
-    // 4. Check user's credits
+    // 4. Check user's credits BEFORE making any API calls
     const { data: profile } = await supabase
       .from('profiles')
       .select('credits')
       .eq('id', userId)
       .single();
 
-    if (!profile || profile.credits < 10) {
+    if (!profile) {
       return NextResponse.json({
         success: false,
-        error: 'Insufficient credits. You need at least 10 credits.'
+        error: 'Profile not found'
+      }, { status: 404 });
+    }
+
+    // Calculate credits needed for plan generation (estimate: 5 credits)
+    const planCreditsNeeded = 5;
+    
+    if (profile.credits < planCreditsNeeded) {
+      return NextResponse.json({
+        success: false,
+        error: `Insufficient credits. You need at least ${planCreditsNeeded} credits to generate a plan. You have ${profile.credits} credits.`
       }, { status: 402 });
     }
 
-    // 5. Web search if requested
+    // 5. Deduct credits BEFORE making API calls
+    const newCredits = profile.credits - planCreditsNeeded;
+    await supabase
+      .from('profiles')
+      .update({ credits: newCredits })
+      .eq('id', userId);
+
+    await supabase.from('credit_transactions').insert({
+      user_id: userId,
+      amount: -planCreditsNeeded,
+      type: 'deduct',
+      description: `Plan generation for project ${projectId}`
+    });
+
+    // 6. Web search if requested (only if user has enough credits)
     let searchContext = '';
     if (useSearch && process.env.TAVILY_API_KEY) {
       try {
@@ -73,12 +97,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. Generate plan first
+    // 7. Generate plan (credits already deducted)
     const planPrompt = searchContext
       ? `${prompt}\n\nContext from web search:\n${searchContext}`
       : prompt;
 
-    const plan = await generatePlan(planPrompt);
+    let plan: string;
+    try {
+      plan = await generatePlan(planPrompt);
+    } catch (error: any) {
+      // If plan generation fails, refund credits
+      await supabase
+        .from('profiles')
+        .update({ credits: profile.credits })
+        .eq('id', userId);
+      
+      await supabase.from('credit_transactions').insert({
+        user_id: userId,
+        amount: planCreditsNeeded,
+        type: 'refund',
+        description: `Refund for failed plan generation: ${error.message}`
+      });
+
+      throw error;
+    }
 
     // Save plan as a message
     await supabase.from('project_messages').insert({
@@ -97,7 +139,12 @@ export async function POST(req: NextRequest) {
 
     const hasEnvKeys = envVars && envVars.length > 0;
 
-    // 8. Return plan and indicate if ENV keys are needed
+    // 8. Estimate credits needed for full generation (based on plan complexity)
+    // Estimate: 10-50 credits depending on complexity
+    const estimatedGenerationCredits = Math.min(50, Math.max(10, Math.ceil(plan.length / 100) * 5));
+    const totalCreditsNeeded = planCreditsNeeded + estimatedGenerationCredits;
+
+    // 9. Return plan and indicate if ENV keys are needed
     return NextResponse.json({
       success: true,
       plan: plan,
@@ -105,9 +152,13 @@ export async function POST(req: NextRequest) {
       planPrompt: planPrompt, // Store for code generation
       requiresApproval: true,
       needsEnvKeys: !hasEnvKeys,
+      creditsUsed: planCreditsNeeded,
+      creditsRemaining: newCredits,
+      estimatedGenerationCredits: estimatedGenerationCredits,
+      totalCreditsNeeded: totalCreditsNeeded,
       message: hasEnvKeys 
-        ? 'Plan generated! Please review and approve to continue with code generation.'
-        : 'Plan generated! Before generating code, please configure your environment variables (API keys) in Settings.'
+        ? `Plan generated! (Used ${planCreditsNeeded} credits, ${newCredits} remaining). Estimated ${estimatedGenerationCredits} credits needed for generation. Please review and approve to continue.`
+        : `Plan generated! (Used ${planCreditsNeeded} credits, ${newCredits} remaining). Before generating code, please configure your environment variables (API keys) in Settings.`
     });
 
   } catch (error: any) {

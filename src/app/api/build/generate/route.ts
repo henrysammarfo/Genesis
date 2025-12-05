@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
     }
 
-    // 4. Check user's credits
+    // 4. Check user's credits BEFORE making API calls
     const { data: profile } = await supabase
       .from('profiles')
       .select('credits')
@@ -49,39 +49,90 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Profile not found' }, { status: 404 });
     }
 
-    // 5. Generate full project code
-    const fullStackProject = await generateFullStackDApp(planPrompt);
+    // 5. Estimate credits needed (conservative estimate: 30-50 credits for full generation)
+    // We'll calculate actual credits after generation, but deduct upfront to prevent quota abuse
+    const estimatedCreditsNeeded = 40; // Conservative estimate
 
-    // 6. Calculate credits (based on complexity)
+    if (profile.credits < estimatedCreditsNeeded) {
+      return NextResponse.json({
+        success: false,
+        error: `Insufficient credits. Estimated ${estimatedCreditsNeeded} credits needed for full generation. You have ${profile.credits} credits.`
+      }, { status: 402 });
+    }
+
+    // 6. Deduct credits BEFORE making API calls
+    const newCredits = profile.credits - estimatedCreditsNeeded;
+    await supabase
+      .from('profiles')
+      .update({ credits: newCredits })
+      .eq('id', userId);
+
+    await supabase.from('credit_transactions').insert({
+      user_id: userId,
+      amount: -estimatedCreditsNeeded,
+      type: 'deduct',
+      description: `Full-stack dApp generation (estimated) for project ${projectId}`
+    });
+
+    // 7. Generate full project code (credits already deducted)
+    let fullStackProject;
+    try {
+      fullStackProject = await generateFullStackDApp(planPrompt);
+    } catch (error: any) {
+      // If generation fails, refund credits
+      await supabase
+        .from('profiles')
+        .update({ credits: profile.credits })
+        .eq('id', userId);
+      
+      await supabase.from('credit_transactions').insert({
+        user_id: userId,
+        amount: estimatedCreditsNeeded,
+        type: 'refund',
+        description: `Refund for failed generation: ${error.message}`
+      });
+
+      throw error;
+    }
+
+    // 8. Calculate actual credits used (based on complexity)
     const totalFiles =
       fullStackProject.contracts.length +
       fullStackProject.frontend.length +
       fullStackProject.backend.length +
       fullStackProject.config.length;
 
-    const creditsUsed = Math.max(10, Math.ceil(totalFiles * 2));
-
-    if (profile.credits < creditsUsed) {
-      return NextResponse.json({
-        success: false,
-        error: `Insufficient credits. Required: ${creditsUsed}, Available: ${profile.credits}`
-      }, { status: 402 });
+    const actualCreditsUsed = Math.max(10, Math.ceil(totalFiles * 2));
+    
+    // Adjust credits if actual usage differs from estimate
+    const creditsDifference = actualCreditsUsed - estimatedCreditsNeeded;
+    if (creditsDifference !== 0) {
+      const finalCredits = newCredits - creditsDifference;
+      await supabase
+        .from('profiles')
+        .update({ credits: finalCredits })
+        .eq('id', userId);
+      
+      if (creditsDifference > 0) {
+        // Need to deduct more
+        await supabase.from('credit_transactions').insert({
+          user_id: userId,
+          amount: -creditsDifference,
+          type: 'deduct',
+          description: `Additional credits for generation (actual usage)`
+        });
+      } else {
+        // Refund excess
+        await supabase.from('credit_transactions').insert({
+          user_id: userId,
+          amount: Math.abs(creditsDifference),
+          type: 'refund',
+          description: `Refund excess credits (actual usage less than estimate)`
+        });
+      }
     }
 
-    // 7. Deduct credits
-    await supabase
-      .from('profiles')
-      .update({ credits: profile.credits - creditsUsed })
-      .eq('id', userId);
-
-    await supabase.from('credit_transactions').insert({
-      user_id: userId,
-      amount: -creditsUsed,
-      type: 'deduct',
-      description: `Full-stack dApp generation for project ${projectId}`
-    });
-
-    // 8. Save all generated files to project
+    // 9. Save all generated files to project
     const allFiles = [
       ...fullStackProject.contracts,
       ...fullStackProject.frontend,
@@ -113,7 +164,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 9. Save README
+    // 10. Save README
     await supabase.from('project_files').insert({
       project_id: projectId,
       name: 'README.md',
@@ -133,11 +184,18 @@ export async function POST(req: NextRequest) {
     });
 
     // 11. Return success
+    // Get final credits
+    const { data: finalProfile } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
     return NextResponse.json({
       success: true,
       project: fullStackProject,
-      creditsUsed,
-      creditsRemaining: profile.credits - creditsUsed,
+      creditsUsed: actualCreditsUsed,
+      creditsRemaining: finalProfile?.credits || newCredits,
       filesGenerated: totalFiles,
       message: 'Full-stack dApp generated successfully!'
     });

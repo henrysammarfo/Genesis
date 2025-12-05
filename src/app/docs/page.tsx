@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
 import { useState, useEffect } from "react"
-import { 
-  Sparkles, 
-  Code, 
-  Shield, 
-  Zap, 
-  Book, 
-  Github, 
+import {
+  Sparkles,
+  Code,
+  Shield,
+  Zap,
+  Book,
+  Github,
   Play,
   Settings,
   Network,
@@ -43,6 +43,15 @@ export default function DocsPage() {
       ]
     },
     {
+      title: "Core Features",
+      items: [
+        { title: "Project Sessions", id: "projects", icon: Settings },
+        { title: "File Uploads", id: "uploads", icon: Cloud },
+        { title: "Environment Variables", id: "env", icon: Shield },
+        { title: "Full-Stack Generation", id: "fullstack", icon: Code },
+      ]
+    },
+    {
       title: "Architecture",
       items: [
         { title: "MCP Servers", id: "mcp", icon: Network },
@@ -51,8 +60,9 @@ export default function DocsPage() {
       ]
     },
     {
-      title: "Features",
+      title: "Reference",
       items: [
+        { title: "API Reference", id: "api", icon: Network },
         { title: "Contract Generation", id: "generation", icon: Code },
         { title: "Security Analysis", id: "security", icon: Shield },
         { title: "Deployment", id: "deployment", icon: Play },
@@ -74,9 +84,9 @@ export default function DocsPage() {
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="flex items-center space-x-2">
+              <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Genesis</span>
               <Badge variant="secondary" className="ml-2">Docs</Badge>
@@ -146,10 +156,10 @@ export default function DocsPage() {
               <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground via-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Genesis 2.0 Documentation
               </h1>
-            <p className="text-xl text-muted-foreground">
+              <p className="text-xl text-muted-foreground">
                 Complete guide to AI-powered smart contract generation, MCP servers, multi-agent systems, and the NullShot framework
-            </p>
-          </div>
+              </p>
+            </div>
 
             {/* Introduction */}
             <section id="intro" className="mb-16 scroll-mt-20">
@@ -162,7 +172,7 @@ export default function DocsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">
-                    Genesis 2.0 is an AI-powered smart contract generation platform that leverages multi-agent AI systems, 
+                    Genesis 2.0 is an AI-powered smart contract generation platform that leverages multi-agent AI systems,
                     Model Context Protocol (MCP) servers, and the NullShot framework to create production-ready dApps.
                   </p>
                   <div className="grid md:grid-cols-3 gap-4 mt-6">
@@ -211,7 +221,7 @@ export default function DocsPage() {
                   </div>
                 </CardContent>
               </Card>
-      </section>
+            </section>
 
             {/* MCP Servers */}
             <section id="mcp" className="mb-16 scroll-mt-20">
@@ -226,12 +236,12 @@ export default function DocsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-muted-foreground">
-                      The Model Context Protocol (MCP) is an open protocol that enables AI applications to securely access 
+                      The Model Context Protocol (MCP) is an open protocol that enables AI applications to securely access
                       external data sources and tools. In Genesis, MCP servers act as the bridge between our AI agents and blockchain operations.
                     </p>
                     <div className="bg-muted p-4 rounded-lg">
                       <p className="text-sm font-mono whitespace-pre-wrap">
-{`MCP servers expose tools that agents can call:
+                        {`MCP servers expose tools that agents can call:
 • deploy_contract: Deploy contracts to Sepolia testnet
 • verify_source: Verify contract source code
 • analyze_security: Perform security analysis`}
@@ -262,8 +272,8 @@ export default function DocsPage() {
                         <h4 className="font-semibold mb-1">analyze_security</h4>
                         <p className="text-sm text-muted-foreground">
                           Performs comprehensive AI-powered security analysis to detect vulnerabilities.
-            </p>
-          </div>
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -277,7 +287,7 @@ export default function DocsPage() {
                 <span>Multi-Agent AI System</span>
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
-            <Card>
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Zap className="h-5 w-5 text-blue-500" />
@@ -285,7 +295,7 @@ export default function DocsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Analyzes requirements and creates detailed implementation plans with step-by-step breakdowns.
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
@@ -293,10 +303,10 @@ export default function DocsPage() {
                       <li>• Architecture planning</li>
                       <li>• Component identification</li>
                     </ul>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            <Card>
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Code className="h-5 w-5 text-purple-500" />
@@ -304,7 +314,7 @@ export default function DocsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Generates production-ready Solidity code following best practices and standards.
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
@@ -312,10 +322,10 @@ export default function DocsPage() {
                       <li>• Best practices</li>
                       <li>• OpenZeppelin integration</li>
                     </ul>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            <Card>
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Shield className="h-5 w-5 text-red-500" />
@@ -323,7 +333,7 @@ export default function DocsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Reviews contracts for vulnerabilities and security issues before deployment.
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
@@ -331,10 +341,10 @@ export default function DocsPage() {
                       <li>• Security scoring</li>
                       <li>• Recommendations</li>
                     </ul>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            <Card>
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Settings className="h-5 w-5 text-green-500" />
@@ -342,7 +352,7 @@ export default function DocsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Optimizes gas usage and improves code efficiency.
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
@@ -350,24 +360,327 @@ export default function DocsPage() {
                       <li>• Storage layout</li>
                       <li>• Performance tuning</li>
                     </ul>
-              </CardContent>
-            </Card>
-        </div>
-      </section>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+
+            {/* Project Sessions */}
+            <section id="projects" className="mb-16 scroll-mt-20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+                <Settings className="h-6 w-6" />
+                <span>Project Sessions</span>
+              </h2>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Multi-Project Management</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground">
+                    Genesis supports multiple project sessions, similar to Cursor or Bolt. Each project maintains its own:
+                  </p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">💬 Chat History</h4>
+                      <p className="text-sm text-muted-foreground">
+                        All conversations are saved per project. Switch between projects without losing context.
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">📁 Generated Files</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Contracts, frontend code, and configs are organized by project.
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">📤 Uploaded Files</h4>
+                      <p className="text-sm text-muted-foreground">
+                        PDFs and images uploaded for context stay with their project.
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">⚙️ Project Settings</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Each project can have its own configuration and metadata.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg mt-4">
+                    <h4 className="font-semibold mb-2">How to Use:</h4>
+                    <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                      <li>Click "New Project" in the dashboard</li>
+                      <li>Give your project a name and description</li>
+                      <li>Start chatting with the AI about your dApp</li>
+                      <li>Switch between projects anytime from the sidebar</li>
+                      <li>All your work is automatically saved</li>
+                    </ol>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* File Uploads */}
+            <section id="uploads" className="mb-16 scroll-mt-20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+                <Cloud className="h-6 w-6" />
+                <span>File Uploads & Context</span>
+              </h2>
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Document Upload (PDF/TXT)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground">
+                      Upload documentation, whitepapers, or specifications to give the AI more context about your project.
+                    </p>
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h4 className="font-semibold mb-2">Supported Formats:</h4>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• PDF - Technical documentation, whitepapers</li>
+                        <li>• TXT - Plain text specifications, requirements</li>
+                      </ul>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                      <p className="text-sm text-blue-900 dark:text-blue-100">
+                        <strong>Pro Tip:</strong> Upload your project requirements or existing contract documentation
+                        to help the AI understand your specific needs better.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Image Upload</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground">
+                      Upload UI mockups, wireframes, or design references for frontend generation.
+                    </p>
+                    <div className="bg-muted p-4 rounded-lg">
+                      <h4 className="font-semibold mb-2">Use Cases:</h4>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• UI/UX mockups for frontend generation</li>
+                        <li>• Architecture diagrams for system design</li>
+                        <li>• Design references for styling</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
+
+            {/* ENV Management */}
+            <section id="env" className="mb-16 scroll-mt-20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+                <Shield className="h-6 w-6" />
+                <span>Environment Variables</span>
+              </h2>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Secure API Key Management</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground">
+                    Store your API keys securely and use them for dApp generation. All values are encrypted at rest.
+                  </p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">🔐 Encrypted Storage</h4>
+                      <p className="text-sm text-muted-foreground">
+                        All API keys are encrypted using AES-256 before storage.
+                      </p>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">🔑 Your Keys, Your Control</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Use your own AI provider keys for generation.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">Supported Keys:</h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• GEMINI_API_KEY - Google AI for generation</li>
+                      <li>• TAVILY_API_KEY - Web search integration</li>
+                      <li>• DEPLOYER_PRIVATE_KEY - Ethereum deployment</li>
+                      <li>• Custom keys for your specific needs</li>
+                    </ul>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+                    <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                      <strong>Security Note:</strong> Never share your API keys. Genesis encrypts them,
+                      but you should still rotate keys regularly and use keys with appropriate permissions.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Full-Stack Generation */}
+            <section id="fullstack" className="mb-16 scroll-mt-20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+                <Code className="h-6 w-6" />
+                <span>Full-Stack dApp Generation</span>
+              </h2>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Complete Project Generation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-muted-foreground">
+                    Genesis doesn't just generate smart contracts - it builds complete, production-ready dApps with frontend, backend, and deployment scripts.
+                  </p>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">📜 Smart Contracts</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Solidity contracts</li>
+                        <li>• Test files</li>
+                        <li>• Deployment scripts</li>
+                        <li>• Security analysis</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">🎨 Frontend</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• React/Next.js</li>
+                        <li>• TypeScript</li>
+                        <li>• Tailwind CSS</li>
+                        <li>• Web3 integration</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">⚙️ Backend</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• API routes</li>
+                        <li>• Database schemas</li>
+                        <li>• Authentication</li>
+                        <li>• Integration code</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">Generation Workflow:</h4>
+                    <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                      <li><strong>Planning:</strong> AI analyzes your requirements and creates a detailed plan</li>
+                      <li><strong>Architecture:</strong> Designs the system structure and component relationships</li>
+                      <li><strong>Code Generation:</strong> Generates all files (contracts, frontend, backend)</li>
+                      <li><strong>Security Analysis:</strong> Scans for vulnerabilities and suggests improvements</li>
+                      <li><strong>Integration:</strong> Creates connection code between components</li>
+                      <li><strong>Documentation:</strong> Generates README and setup instructions</li>
+                    </ol>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* API Reference */}
+            <section id="api" className="mb-16 scroll-mt-20">
+              <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+                <Network className="h-6 w-6" />
+                <span>API Reference</span>
+              </h2>
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Projects API</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="border-l-4 border-blue-500 pl-4">
+                        <h4 className="font-semibold mb-1">POST /api/projects</h4>
+                        <p className="text-sm text-muted-foreground mb-2">Create a new project</p>
+                        <pre className="text-xs bg-muted p-2 rounded overflow-auto">
+                          {`{
+  "name": "My NFT Marketplace",
+  "description": "A marketplace for trading NFTs"
+}`}
+                        </pre>
+                      </div>
+                      <div className="border-l-4 border-green-500 pl-4">
+                        <h4 className="font-semibold mb-1">GET /api/projects</h4>
+                        <p className="text-sm text-muted-foreground">List all user projects</p>
+                      </div>
+                      <div className="border-l-4 border-purple-500 pl-4">
+                        <h4 className="font-semibold mb-1">GET /api/projects/:id</h4>
+                        <p className="text-sm text-muted-foreground">Get project details</p>
+                      </div>
+                      <div className="border-l-4 border-red-500 pl-4">
+                        <h4 className="font-semibold mb-1">DELETE /api/projects/:id</h4>
+                        <p className="text-sm text-muted-foreground">Delete a project</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Messages API</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="border-l-4 border-blue-500 pl-4">
+                        <h4 className="font-semibold mb-1">POST /api/projects/:id/messages</h4>
+                        <p className="text-sm text-muted-foreground mb-2">Add a message to project chat</p>
+                        <pre className="text-xs bg-muted p-2 rounded overflow-auto">
+                          {`{
+  "role": "user",
+  "content": "Add a minting function to the contract"
+}`}
+                        </pre>
+                      </div>
+                      <div className="border-l-4 border-green-500 pl-4">
+                        <h4 className="font-semibold mb-1">GET /api/projects/:id/messages</h4>
+                        <p className="text-sm text-muted-foreground">Get project chat history</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Files API</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="border-l-4 border-blue-500 pl-4">
+                        <h4 className="font-semibold mb-1">POST /api/projects/:id/files</h4>
+                        <p className="text-sm text-muted-foreground mb-2">Add a generated file to project</p>
+                        <pre className="text-xs bg-muted p-2 rounded overflow-auto">
+                          {`{
+  "name": "Token.sol",
+  "path": "contracts/Token.sol",
+  "content": "pragma solidity...",
+  "type": "contract",
+  "language": "solidity"
+}`}
+                        </pre>
+                      </div>
+                      <div className="border-l-4 border-green-500 pl-4">
+                        <h4 className="font-semibold mb-1">GET /api/projects/:id/files</h4>
+                        <p className="text-sm text-muted-foreground">Get all project files</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </section>
 
             {/* NullShot Framework */}
             <section id="nullshot" className="mb-16 scroll-mt-20">
               <h2 className="text-3xl font-bold mb-6 flex items-center space-x-2">
                 <Cloud className="h-6 w-6" />
                 <span>NullShot Framework</span>
-          </h2>
+              </h2>
               <Card>
                 <CardHeader>
                   <CardTitle>What is NullShot?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">
-                    NullShot is a TypeScript agent framework designed for Cloudflare Workers. It provides a standardized 
+                    NullShot is a TypeScript agent framework designed for Cloudflare Workers. It provides a standardized
                     way to build, deploy, and manage AI agents at the edge.
                   </p>
                   <div className="bg-muted p-4 rounded-lg">
@@ -379,15 +692,15 @@ export default function DocsPage() {
                       <li>• Streaming responses for real-time interaction</li>
                       <li>• Built-in MCP server integration</li>
                     </ul>
-        </div>
+                  </div>
                 </CardContent>
               </Card>
-      </section>
+            </section>
 
-      {/* Footer */}
+            {/* Footer */}
             <div className="border-t border-border mt-16 pt-8">
               <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div>
+                <div>
                   <p className="text-sm text-muted-foreground">
                     &copy; 2024 Genesis. All rights reserved.
                   </p>
@@ -406,7 +719,7 @@ export default function DocsPage() {
             </div>
           </div>
         </main>
-        </div>
+      </div>
     </div>
   )
 }

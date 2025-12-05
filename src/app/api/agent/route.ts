@@ -53,13 +53,24 @@ export async function POST(req: Request) {
 
         const { messages } = validation.data;
 
-        logger.info('Agent request received', { userId, requestId, messageCount: messages.length });
+        logger.info('Agent request received', { userId, requestId, messageCount: messages?.length || 0 });
+
+        // Ensure messages is an array
+        if (!Array.isArray(messages)) {
+            logger.warn('Messages is not an array', { userId, requestId, messages });
+            return new Response(JSON.stringify({
+                error: 'Messages must be an array'
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
         // Convert messages to CoreMessage format - filter out empty messages and ensure proper structure
         const coreMessages: CoreMessage[] = messages
             .filter((msg: { role: string; content: string }) => {
                 // Filter out messages with empty or missing content
-                return msg.content && msg.content.trim().length > 0;
+                return msg && msg.content && typeof msg.content === 'string' && msg.content.trim().length > 0;
             })
             .map((msg: { role: string; content: string }) => ({
                 role: msg.role as 'user' | 'assistant' | 'system',

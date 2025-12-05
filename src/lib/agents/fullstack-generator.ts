@@ -3,15 +3,24 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 // Initialize model with API key from environment
 // Support both GEMINI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY for compatibility
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-
-if (!apiKey) {
-    console.error('⚠️ GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY not found in environment variables');
-    throw new Error('Google Generative AI API key is missing. Pass it using the GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY environment variable.');
+// Load at runtime to support both local (.env.local) and production (env vars)
+function getApiKey(): string | null {
+    return process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || null;
 }
 
-const google = createGoogleGenerativeAI({ apiKey });
-const model = google('gemini-2.0-flash-exp');
+function getModel() {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        return null;
+    }
+    try {
+        const google = createGoogleGenerativeAI({ apiKey });
+        return google('gemini-2.0-flash-exp');
+    } catch (error) {
+        console.error('Error initializing Google AI model:', error);
+        return null;
+    }
+}
 
 export interface FullStackProject {
     contracts: { name: string; path: string; content: string; language: string }[];
@@ -22,6 +31,17 @@ export interface FullStackProject {
 }
 
 export async function generateFullStackDApp(prompt: string): Promise<FullStackProject> {
+    // Get model at runtime to support dynamic env vars
+    const model = getModel();
+    
+    if (!model) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error('Google Generative AI API key is missing. Please set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY in your environment variables.\n\nFor local development, create a .env.local file with:\nGEMINI_API_KEY=your_api_key_here');
+        }
+        throw new Error('Failed to initialize Google AI model. Please check your API key.');
+    }
+
     const systemPrompt = `You are a full-stack Web3 developer. Generate a COMPLETE dApp with:
 1. Smart contracts (Solidity)
 2. Frontend (React/Next.js)
@@ -120,6 +140,15 @@ export default function App() {
 }
 
 export async function generatePlan(prompt: string): Promise<string> {
+    const model = getModel();
+    if (!model) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error('Google Generative AI API key is missing. Please set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY in your environment variables.');
+        }
+        throw new Error('Failed to initialize Google AI model. Please check your API key.');
+    }
+
     const result = await generateText({
         model,
         system: `You are an expert Web3 architect. Create a detailed plan for building a dApp.
@@ -140,6 +169,15 @@ Be specific and actionable.`,
 }
 
 export async function generateSmartContract(description: string): Promise<string> {
+    const model = getModel();
+    if (!model) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error('Google Generative AI API key is missing. Please set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY in your environment variables.');
+        }
+        throw new Error('Failed to initialize Google AI model. Please check your API key.');
+    }
+
     const result = await generateText({
         model,
         system: `You are an expert Solidity developer. Generate secure, well-documented smart contracts.
@@ -156,7 +194,16 @@ Include:
     return result.text;
 }
 
-export async function generateFrontend(description: string, contractABI?: any): Promise<string> {
+export async function generateFrontend(description: string, contractABI?: unknown): Promise<string> {
+    const model = getModel();
+    if (!model) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error('Google Generative AI API key is missing. Please set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY in your environment variables.');
+        }
+        throw new Error('Failed to initialize Google AI model. Please check your API key.');
+    }
+
     const result = await generateText({
         model,
         system: `You are an expert React/Next.js developer. Generate modern, responsive frontend code.

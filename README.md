@@ -3,95 +3,69 @@
 > **🏆 Hackathon Submission:** NullShot Hacks S0 & DoraHacks BUIDL  
 > **🤖 AI Agent + MCP Server** for Web3 Development
 
-An AI-powered platform that transforms natural language into production-ready decentralized applications. Built on the NullShot framework with integrated MCP (Model Context Protocol) servers, Genesis leverages multiple specialized AI agents to handle every aspect of dApp development.
+An AI-powered platform that transforms natural language into production-ready decentralized applications. Built on the NullShot framework with integrated MCP (Model Context Protocol) servers, Genesis leverages Google Gemini 2.0 Flash to provide intelligent Web3 development assistance.
 
 ---
 
-## 🎯 For Judges: Quick Testing Guide
+## 🎯 For Judges: Testing Without Frontend
 
-### Testing the MCP Server (Deployed & Ready)
+**The Genesis backend (AI Agent + MCP Server) is fully functional and can be tested via API - no frontend required!**
 
-The Genesis MCP Server is **deployed and functional**. Test it directly:
+### Option 1: Test Locally (Recommended - No Deployment Needed)
 
-**MCP Endpoint:** `https://genesis-ai.workers.dev/mcp` *(replace with your actual URL)*
-
-#### Option 1: Using MCP Inspector
 ```bash
-npx @modelcontextprotocol/inspector https://genesis-ai.workers.dev/mcp
+# 1. Navigate to worker directory
+cd genesis-nullshot-worker
+
+# 2. Install dependencies (if not already done)
+npm install
+
+# 3. Start local development server
+npm run dev
+# Server runs at http://localhost:8787
 ```
 
-#### Option 2: Direct HTTP Calls
+**Test the local server:**
 ```bash
-# List available tools
-curl https://genesis-ai.workers.dev/mcp/tools
+# Health check
+curl http://localhost:8787/health
+# Returns: {"status":"healthy"}
 
-# Test security analysis
-curl -X POST https://genesis-ai.workers.dev/mcp/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "analyze_security",
-    "arguments": {
-      "source_code": "pragma solidity ^0.8.0; contract Token { mapping(address => uint256) public balances; function transfer(address to, uint256 amount) public { balances[msg.sender] -= amount; balances[to] += amount; } }"
-    }
-  }'
+# List MCP tools
+curl -X POST http://localhost:8787/mcp `
+  -H "Content-Type: application/json" `
+  -d '{"method": "tools/list"}'
 
-# Test web search
-curl -X POST https://genesis-ai.workers.dev/mcp/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "web_search",
-    "arguments": {
-      "query": "ERC20 best practices 2024"
-    }
-  }'
+# Test AI Agent
+curl -X POST http://localhost:8787/agent/chat/test-session `
+  -H "Content-Type: application/json" `
+  -d '{"messages": [{"role": "user", "content": "Explain ERC20 tokens"}]}'
 ```
 
-### Testing the AI Agent (Backend API)
+### Option 2: Test Deployed Worker (If Available)
 
-The AI Agent runs on Cloudflare Durable Objects and can be tested via API:
-
-**Agent Endpoint:** `https://genesis-ai.workers.dev/agent`
-
-#### Start a Conversation
+If the worker is deployed to Cloudflare, find the URL:
 ```bash
-# Create a new session and send a message
-curl -X POST https://genesis-ai.workers.dev/agent/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Create an ERC20 token with 1 million supply and transfer fees",
-    "sessionId": "test-session-123"
-  }'
+cd genesis-nullshot-worker
+npx wrangler deployments list
+# Look for: https://genesis-ai.<account>.workers.dev
 ```
 
-#### Stream Responses (WebSocket)
-```javascript
-// Connect to WebSocket for real-time streaming
-const ws = new WebSocket('wss://genesis-ai.workers.dev/agent/stream?sessionId=test-session-123');
-
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  console.log('Agent response:', data);
-};
-
-ws.send(JSON.stringify({
-  message: "Add a staking mechanism to the token"
-}));
-```
+Replace `localhost:8787` with the deployed URL in the commands above.
 
 ---
 
 ## 🌟 Overview
 
-Genesis is a revolutionary platform that democratizes Web3 development through AI. No frontend deployment is required to test the core functionality - both the AI Agent and MCP Server are accessible via API.
+Genesis democratizes Web3 development through AI-powered code generation and analysis.
 
 ### Key Highlights
-- 🤖 **Multi-Agent AI System** - Specialized agents for architecture, engineering, security, and optimization
-- 🔌 **MCP Server Integration** - Model Context Protocol for tool interoperability
-- ⚡ **Real-time Streaming** - Live updates as code is generated via WebSocket
+- 🤖 **AI-Powered Agent** - Google Gemini 2.0 Flash for intelligent assistance
+- 🔌 **MCP Server** - Model Context Protocol for tool interoperability  
 - 🔒 **Security Analysis** - Automated vulnerability scanning
-- 🚀 **Auto-deployment** - Deploy directly to Sepolia testnet
-- 📄 **Document Processing** - Upload PDFs for context
-- 🔍 **Web Search** - AI searches for latest documentation
+- 📝 **Smart Contract Generation** - Production-ready Solidity code
+- ⚡ **Real-time Streaming** - Live responses via Server-Sent Events
+- 🏗️ **NullShot Framework** - Built on Cloudflare Durable Objects
 
 ---
 
@@ -99,113 +73,60 @@ Genesis is a revolutionary platform that democratizes Web3 development through A
 
 ```
 ┌─────────────────────────────────────────────────┐
-│         Client (API/WebSocket/MCP)              │
-│    • HTTP Requests                              │
-│    • WebSocket Streaming                        │
-│    • MCP Protocol Calls                         │
+│         Client (HTTP/MCP Protocol)              │
+│    • curl / HTTP requests                       │
+│    • MCP Inspector                              │
+│    • Any MCP-compatible client                  │
 └─────────────────┬───────────────────────────────┘
                   │
-                  │ HTTPS/WSS
+                  │ HTTP/HTTPS
                   │
 ┌─────────────────▼───────────────────────────────┐
-│         Genesis AI Agent System                  │
-│      (Cloudflare Durable Objects)               │
+│      Genesis Worker (Cloudflare)                │
 │                                                  │
-│  • Architect Agent - System Design              │
-│  • Engineer Agent - Code Generation             │
-│  • Security Agent - Vulnerability Analysis      │
-│  • Optimizer Agent - Gas Optimization           │
-│  • Gemini 2.0 Flash Integration                 │
-│  • NullShot Framework                           │
-└─────────────────┬───────────────────────────────┘
-                  │
-                  │ MCP Protocol
-                  │
-┌─────────────────▼───────────────────────────────┐
-│            Genesis MCP Server                    │
-│      (Cloudflare Durable Objects)               │
+│  ┌────────────────────────────────────────────┐ │
+│  │  Genesis AI Agent                          │ │
+│  │  (Durable Object)                          │ │
+│  │  • Google Gemini 2.0 Flash                 │ │
+│  │  • Session management                      │ │
+│  │  • Streaming responses                     │ │
+│  └────────────────────────────────────────────┘ │
 │                                                  │
-│  Tools:                                         │
-│  • analyze_security - Security scanning         │
-│  • verify_source - Etherscan verification       │
-│  • deploy_contract - Smart contract deployment  │
-│  • web_search - Documentation research          │
-│  • process_document - PDF/TXT analysis          │
-│                                                  │
-│  Integrations:                                  │
-│  • Tavily API (Web Research)                    │
-│  • Ethers.js (Blockchain Interaction)           │
-│  • Supabase (Data Persistence)                  │
-└─────────────────────────────────────────────────┘
+│  ┌────────────────────────────────────────────┐ │
+│  │  MCP Server                                │ │
+│  │  • analyze_security                        │ │
+│  │  • verify_source                           │ │
+│  │  • deploy_contract                         │ │
+│  └────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## ✨ Features
 
-### Genesis AI Agents
-- **Real-time conversational interface** for dApp development
-- **Powered by Google Gemini 2.0 Flash** for advanced reasoning
-- **Session-based project management** via Durable Objects
-- **Automatic tool invocation** for security analysis and deployment
-- **WebSocket and SSE support** for streaming responses
-- **Multi-agent collaboration** with specialized roles
+### Genesis AI Agent
+- **Conversational Interface** - Chat with AI about Web3 development
+- **Powered by Gemini 2.0 Flash** - Advanced reasoning and code generation
+- **Session-based** - Persistent conversations via Durable Objects
+- **Streaming Responses** - Real-time text streaming
 
-### Genesis MCP Server
-- **Security Analysis**: Comprehensive smart contract vulnerability scanning
-  - Reentrancy detection
-  - Access control verification
-  - Integer overflow/underflow checks
-  - Gas optimization recommendations
-  
-- **Source Verification**: Automated Etherscan verification URL generation
-  - Multi-network support (Sepolia, Mainnet)
-  - Automatic constructor argument encoding
-  
-- **Contract Deployment**: Guided deployment to Sepolia testnet
-  - Transaction tracking
-  - Gas estimation
-  - Deployment status monitoring
-  
-- **Web Research**: Integrated search for latest Web3 documentation
-  - Powered by Tavily API
-  - Returns code examples and best practices
-  
-- **Document Processing**: Extract requirements from uploaded PDFs/TXT files
-  - Context extraction for AI agents
-  - Requirement analysis
-
-### Complete Project Generation
-- **Smart Contracts**: Solidity contracts with security best practices
-- **Frontend**: React/Next.js with Web3 integration (code generation)
-- **Backend APIs**: RESTful endpoints and WebSocket handlers
-- **Configuration**: Environment setup and deployment scripts
-- **Documentation**: Comprehensive README and API docs
+### Genesis MCP Server  
+- **Security Analysis** - Scans smart contracts for vulnerabilities
+- **Source Verification** - Generates Etherscan verification URLs
+- **Contract Deployment** - Deployment guidance for Sepolia testnet
+- **MCP Protocol** - Compatible with any MCP client
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Genesis AI Agent
-- **Framework**: NullShot Framework for agent orchestration
-- **AI Model**: Google Gemini 2.0 Flash Experimental
-- **Runtime**: Cloudflare Durable Objects
-- **Real-time**: WebSocket and Server-Sent Events
-- **Language**: TypeScript
-
-### Genesis MCP Server
-- **Protocol**: Model Context Protocol (MCP)
-- **Runtime**: Cloudflare Durable Objects
-- **Database**: Supabase (PostgreSQL)
-- **Search**: Tavily API
-- **Blockchain**: Ethers.js, Sepolia Testnet
-- **Security**: Automated vulnerability scanning
-
-### Frontend (Optional - Not Required for Testing)
-- Next.js 16
-- React 19
-- TailwindCSS
-- TypeScript
+- **AI Model:** Google Gemini 2.0 Flash Experimental
+- **Framework:** NullShot (Cloudflare Durable Objects)
+- **Protocol:** Model Context Protocol (MCP)
+- **Runtime:** Cloudflare Workers
+- **Language:** TypeScript
+- **Web Framework:** Hono
 
 ---
 
@@ -213,104 +134,53 @@ Genesis is a revolutionary platform that democratizes Web3 development through A
 
 ```
 Genesis/
-├── src/
-│   ├── app/                    # Next.js app directory (frontend)
-│   │   ├── api/               # API routes
-│   │   ├── dashboard/         # Dashboard UI
-│   │   └── auth/              # Authentication
-│   ├── components/            # React components
-│   ├── lib/                   # Utilities
-│   └── types/                 # TypeScript types
-├── genesis-nullshot-worker/   # Cloudflare Worker (DEPLOYED)
+├── genesis-nullshot-worker/   # Cloudflare Worker (Backend)
 │   ├── src/
-│   │   ├── agents/           # AI agent implementations
-│   │   │   ├── architect.ts  # Architecture planning
-│   │   │   ├── engineer.ts   # Code generation
-│   │   │   ├── security.ts   # Security analysis
-│   │   │   └── optimizer.ts  # Gas optimization
-│   │   ├── mcp/              # MCP server
-│   │   │   ├── server.ts     # MCP protocol handler
-│   │   │   └── tools/        # Individual MCP tools
-│   │   └── index.ts          # Worker entry point
-│   └── wrangler.jsonc        # Worker configuration
-├── supabase/
-│   └── migrations/           # Database schema
-├── scripts/                  # Deployment scripts
-└── public/                   # Static assets
+│   │   ├── index.ts          # Main worker entry point
+│   │   ├── mcp/              # MCP server implementation
+│   │   │   ├── handlers.ts   # Tool handlers
+│   │   │   └── schemas.ts    # Tool schemas
+│   │   └── ...
+│   ├── wrangler.jsonc        # Cloudflare config
+│   └── package.json
+├── src/                      # Frontend (Next.js - in progress)
+├── supabase/                 # Database migrations
+└── README.md
 ```
 
 ---
 
-## 🚀 Getting Started (For Development)
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+
-- Supabase account
-- Google AI API key
-- Tavily API key (for web search)
-- Cloudflare account (for worker deployment)
+- Google AI API key (for Gemini)
 
-### Installation
+### Local Development
 
 ```bash
-# Clone the repository
+# 1. Clone repository
 git clone https://github.com/henrysammarfo/Genesis.git
-cd Genesis
+cd Genesis/genesis-nullshot-worker
 
-# Install dependencies
+# 2. Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env.local
+# 3. Set up environment (create .dev.vars file)
+echo "GOOGLE_API_KEY=your_api_key_here" > .dev.vars
+
+# 4. Start development server
+npm run dev
+# Server runs at http://localhost:8787
 ```
 
-### Environment Variables
-
-Create `.env.local`:
+### Deployment to Cloudflare
 
 ```bash
-# Google AI
-GEMINI_API_KEY=your_google_api_key
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
-# Web Search
-TAVILY_API_KEY=your_tavily_key
-
-# Blockchain
-DEPLOYER_PRIVATE_KEY=your_ethereum_private_key
-
-# Security
-ENCRYPTION_KEY=your_encryption_key
-
-# Worker URL (deployed)
-NEXT_PUBLIC_WORKER_URL=https://genesis-ai.workers.dev
-```
-
-### Database Setup
-
-1. Go to Supabase SQL Editor
-2. Run the migration:
-   ```sql
-   -- Execute: supabase/migrations/000_complete_schema.sql
-   ```
-
-### Worker Deployment (Already Deployed for Judges)
-
-```bash
-# Navigate to worker directory
-cd genesis-nullshot-worker
-
 # Set secrets
 npx wrangler secret put GOOGLE_API_KEY
-npx wrangler secret put TAVILY_API_KEY
-npx wrangler secret put SUPABASE_URL
-npx wrangler secret put SUPABASE_SERVICE_KEY
 
-# Deploy to Cloudflare
+# Deploy
 npx wrangler deploy
 ```
 
@@ -318,302 +188,177 @@ npx wrangler deploy
 
 ## 📡 API Reference
 
-### Genesis AI Agent API
-
-#### POST `/agent/chat`
-Start or continue a conversation with the AI agent.
-
-**Request:**
-```json
-{
-  "message": "Create an ERC20 token with staking",
-  "sessionId": "unique-session-id",
-  "projectId": "optional-project-id"
-}
+### Health Check
+```bash
+GET /health
 ```
+Returns: `{"status":"healthy"}`
 
-**Response:**
-```json
+### AI Agent Chat
+```bash
+POST /agent/chat/:sessionId
+Content-Type: application/json
+
 {
-  "success": true,
-  "sessionId": "unique-session-id",
-  "response": "I'll help you create an ERC20 token with staking functionality...",
-  "agents": ["architect", "engineer", "security"],
-  "files": [
-    {
-      "name": "Token.sol",
-      "path": "contracts/Token.sol",
-      "content": "pragma solidity ^0.8.0;..."
-    }
+  "messages": [
+    {"role": "user", "content": "Create an ERC20 token"}
   ]
 }
 ```
 
-#### WebSocket `/agent/stream`
-Stream real-time responses from the AI agent.
+Returns: Streaming text response with AI-generated code and explanations
 
-**Connection:**
-```javascript
-const ws = new WebSocket('wss://genesis-ai.workers.dev/agent/stream?sessionId=SESSION_ID');
+### MCP Server - List Tools
+```bash
+POST /mcp
+Content-Type: application/json
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  // data.type: 'thinking' | 'response' | 'file' | 'complete'
-  // data.content: The actual content
-  // data.agent: Which agent is responding
-};
+{
+  "method": "tools/list"
+}
 ```
 
-### Genesis MCP Server API
+Returns: List of available MCP tools
 
-#### GET `/mcp/tools`
-List all available MCP tools.
+### MCP Server - Call Tool
+```bash
+POST /mcp
+Content-Type: application/json
 
-**Response:**
-```json
 {
-  "tools": [
-    {
-      "name": "analyze_security",
-      "description": "Analyzes smart contract code for security vulnerabilities",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "source_code": {
-            "type": "string",
-            "description": "Solidity source code to analyze"
-          }
-        }
-      }
+  "method": "tools/call",
+  "params": {
+    "name": "analyze_security",
+    "arguments": {
+      "source_code": "pragma solidity ^0.8.0; contract Token { ... }"
     }
-  ]
-}
-```
-
-#### POST `/mcp/call`
-Call a specific MCP tool.
-
-**Request:**
-```json
-{
-  "tool": "analyze_security",
-  "arguments": {
-    "source_code": "pragma solidity ^0.8.0; contract Token { ... }"
   }
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "result": {
-    "issues": [
-      {
-        "severity": "high",
-        "title": "Reentrancy vulnerability",
-        "description": "The transfer function is vulnerable to reentrancy attacks",
-        "line": 15,
-        "recommendation": "Use the Checks-Effects-Interactions pattern"
-      }
-    ],
-    "score": 65,
-    "summary": "Found 3 high-severity issues, 2 medium, 1 low"
-  }
-}
-```
+Returns: Tool execution result
 
 ---
 
 ## 🔧 Available MCP Tools
 
 ### 1. `analyze_security`
-Scans smart contracts for vulnerabilities.
+Analyzes smart contract code for security vulnerabilities.
 
 **Input:**
 - `source_code` (string): Solidity source code
 
 **Output:**
-- `issues` (array): List of security issues with severity, title, description
-- `score` (number): Security score 0-100
-- `summary` (string): Brief summary of findings
+- Security analysis with identified issues and recommendations
 
 ### 2. `verify_source`
-Generates Etherscan verification URL.
+Generates Etherscan verification URL for a contract.
 
 **Input:**
 - `address` (string): Contract address
 - `network` (string): Network name (e.g., "sepolia")
 
 **Output:**
-- `verification_url` (string): Etherscan verification URL
-- `network` (string): Network name
+- `verification_url`: Etherscan verification URL
 
 ### 3. `deploy_contract`
-Deploys contract to Sepolia testnet.
+Provides deployment guidance for smart contracts.
 
 **Input:**
 - `source_code` (string): Solidity source code
-- `contract_name` (string): Name of contract to deploy
-- `constructor_args` (array): Constructor arguments
 
 **Output:**
-- `transaction_hash` (string): Deployment transaction hash
-- `contract_address` (string): Deployed contract address
-- `network` (string): Network name
-
-### 4. `web_search`
-Searches for Web3 documentation and examples.
-
-**Input:**
-- `query` (string): Search query
-
-**Output:**
-- `results` (array): Search results with title, url, snippet
-- `summary` (string): AI-generated summary of findings
-
-### 5. `process_document`
-Extracts context from uploaded documents.
-
-**Input:**
-- `content` (string): Document content (PDF/TXT)
-- `type` (string): Document type
-
-**Output:**
-- `extracted_text` (string): Extracted text
-- `requirements` (array): Identified requirements
-- `summary` (string): Document summary
+- Deployment instructions and guidance
 
 ---
 
-## 🌐 Supported Networks
+## 💡 Example Usage
 
-- ✅ Sepolia Testnet (Deployed & Active)
-- 🔄 Ethereum Mainnet (Coming Soon)
-- 🔄 Polygon (Coming Soon)
-- 🔄 Arbitrum (Coming Soon)
-- 🔄 Optimism (Coming Soon)
-- 🔄 Base (Coming Soon)
+### Example 1: Security Analysis
 
----
-
-## 💡 Use Cases & Examples
-
-### Example 1: Generate DeFi Protocol
 ```bash
-curl -X POST https://genesis-ai.workers.dev/agent/chat \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:8787/mcp `
+  -H "Content-Type: application/json" `
   -d '{
-    "message": "Create a lending protocol with collateralized loans, interest rates, and liquidation mechanism",
-    "sessionId": "defi-example"
-  }'
-```
-
-**Result:** Complete lending protocol with:
-- Lending pool contract
-- Interest rate model
-- Liquidation logic
-- Oracle integration
-- Security analysis report
-
-### Example 2: Security Analysis
-```bash
-curl -X POST https://genesis-ai.workers.dev/mcp/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "analyze_security",
-    "arguments": {
-      "source_code": "pragma solidity ^0.8.0;\n\ncontract Vault {\n    mapping(address => uint256) public balances;\n    \n    function deposit() public payable {\n        balances[msg.sender] += msg.value;\n    }\n    \n    function withdraw(uint256 amount) public {\n        require(balances[msg.sender] >= amount);\n        (bool success,) = msg.sender.call{value: amount}(\"\");\n        require(success);\n        balances[msg.sender] -= amount;\n    }\n}"
+    "method": "tools/call",
+    "params": {
+      "name": "analyze_security",
+      "arguments": {
+        "source_code": "pragma solidity ^0.8.0;\n\ncontract Vault {\n    mapping(address => uint256) public balances;\n    \n    function withdraw(uint256 amount) public {\n        require(balances[msg.sender] >= amount);\n        (bool success,) = msg.sender.call{value: amount}(\"\");\n        require(success);\n        balances[msg.sender] -= amount;\n    }\n}"
+      }
     }
   }'
 ```
 
-**Result:** Identifies reentrancy vulnerability and suggests fix.
+**Result:** Identifies reentrancy vulnerability (external call before state update)
 
-### Example 3: Research Best Practices
+### Example 2: AI Agent Conversation
+
 ```bash
-curl -X POST https://genesis-ai.workers.dev/mcp/call \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:8787/agent/chat/my-session `
+  -H "Content-Type: application/json" `
   -d '{
-    "tool": "web_search",
-    "arguments": {
-      "query": "OpenZeppelin ERC721 upgradeable pattern 2024"
-    }
+    "messages": [
+      {"role": "user", "content": "Explain the difference between ERC20 and ERC721"}
+    ]
   }'
 ```
 
-**Result:** Latest documentation and code examples.
+**Result:** Streaming AI response explaining token standards
 
 ---
 
 ## 🎯 NullShot Framework Integration
 
-Genesis is built on the NullShot framework, enabling:
+Genesis is built on the NullShot framework, leveraging:
 
-1. **Zero-Shot Learning:** Agents handle new tasks without specific training
-2. **Multi-Agent Collaboration:** Seamless coordination between specialized agents
-3. **Streaming Responses:** Real-time updates via WebSocket/SSE
-4. **Context Awareness:** Persistent conversation history and project context
-5. **Tool Integration:** MCP servers and external APIs
-6. **Durable Objects:** Stateful, low-latency edge computing
+1. **Durable Objects** - Stateful, low-latency edge computing
+2. **Session Persistence** - Conversations persist across requests
+3. **Scalability** - Automatic distribution across Cloudflare's network
+4. **MCP Protocol** - Interoperable tools for AI agents
 
 ---
 
 ## 📈 Roadmap
 
-- ✅ Multi-agent AI system
-- ✅ MCP server integration
-- ✅ Smart contract generation
-- ✅ Security analysis
-- ✅ Sepolia deployment
-- ✅ WebSocket streaming
-- ✅ Document processing
-- 🔄 Mainnet deployment support
-- 🔄 Multi-chain support (Polygon, Arbitrum, Base)
-- 🔄 Advanced testing framework generation
-- 🔄 CI/CD pipeline generation
-- 🔄 Audit report generation
-- 🔄 Frontend deployment (in progress)
+- ✅ AI Agent with Gemini 2.0 Flash
+- ✅ MCP server implementation
+- ✅ Security analysis tool
+- ✅ Source verification tool
+- ✅ Streaming responses
+- 🔄 Frontend deployment
+- 🔄 Additional MCP tools (web search, document processing)
+- 🔄 Multi-chain support
+- 🔄 Advanced code generation
 
 ---
 
 ## 🔒 Security
 
-- All API keys encrypted at rest
-- Row-level security (RLS) on database
-- Rate limiting on all endpoints
+- API keys stored as Cloudflare secrets
 - Input sanitization and validation
+- Rate limiting on endpoints
 - Automated security scanning of generated contracts
-- Comprehensive security reports
-- No sensitive data in logs
 
 ---
 
 ## 🏆 Why Genesis?
 
 **For Developers:**
-- Accelerate development from weeks to minutes
+- Test AI-powered Web3 assistance via simple API calls
+- Get instant security analysis of smart contracts
 - Learn best practices from AI-generated code
-- Focus on business logic, not boilerplate
-- Test via API without frontend setup
-
-**For Entrepreneurs:**
-- Validate ideas quickly with working prototypes
-- Reduce development costs significantly
-- Launch MVPs faster
-- No technical expertise required
-
-**For the Ecosystem:**
-- Democratize Web3 development
-- Increase quality through automated security analysis
-- Promote best practices and standards
-- Interoperable via MCP protocol
 
 **For Judges:**
-- Easy to test via API/MCP
-- No deployment required
-- Clear documentation
-- Real-world use cases
+- ✅ Easy to test locally - just `npm run dev`
+- ✅ No complex setup required
+- ✅ Clear API documentation
+- ✅ Works without frontend deployment
+
+**For the Ecosystem:**
+- Democratizes Web3 development through AI
+- Promotes security best practices
+- MCP protocol enables interoperability
 
 ---
 
@@ -623,36 +368,27 @@ MIT License - See LICENSE file for details.
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our contributing guidelines.
-
----
-
 ## 📞 Support & Links
 
-- **GitHub Repository:** [https://github.com/henrysammarfo/Genesis](https://github.com/henrysammarfo/Genesis)
+- **GitHub:** [https://github.com/henrysammarfo/Genesis](https://github.com/henrysammarfo/Genesis)
 - **Documentation:** [DOCUMENTATION.md](./DOCUMENTATION.md)
 - **Issues:** [GitHub Issues](https://github.com/henrysammarfo/Genesis/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/henrysammarfo/Genesis/discussions)
 
 ---
 
 ## 🙏 Acknowledgments
 
-Built for the **NullShot Hacks S0** and **DoraHacks BUIDL** programs.
+Built for **NullShot Hacks S0** and **DoraHacks BUIDL** programs.
 
 **Technologies:**
 - [NullShot Framework](https://nullshot.ai) - Agent orchestration
 - [Google Gemini](https://deepmind.google/technologies/gemini/) - AI model
 - [Cloudflare Workers](https://workers.cloudflare.com/) - Edge computing
 - [Model Context Protocol](https://modelcontextprotocol.io/) - Tool interoperability
-- [Supabase](https://supabase.com/) - Database and auth
-- [Ethers.js](https://ethers.org/) - Ethereum library
-- [Tavily](https://tavily.com/) - Web search API
+- [Hono](https://hono.dev/) - Web framework
 
 ---
 
 **Made with ❤️ by the Genesis Team**
 
-> **Note for Judges:** The MCP Server is deployed and ready to test. The AI Agent backend is functional via API. Frontend deployment is in progress but not required for core functionality testing.
+> **Note for Judges:** The backend is fully functional and can be tested locally with `npm run dev` in the `genesis-nullshot-worker` directory. No frontend or cloud deployment required for testing core functionality!

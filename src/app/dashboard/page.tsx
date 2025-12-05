@@ -186,7 +186,17 @@ export default function Dashboard() {
     }, [currentProjectId])
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        // Only scroll chat container, not the whole page
+        if (messagesEndRef.current) {
+            const chatContainer = messagesEndRef.current.closest('.overflow-y-auto');
+            if (chatContainer) {
+                messagesEndRef.current.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'end',
+                    inline: 'nearest'
+                });
+            }
+        }
     }, [messages, streamingText])
 
     const handleLogout = async () => {
@@ -242,7 +252,7 @@ export default function Dashboard() {
         
         if (!isBuildRequest) {
             // Regular conversation - use real AI agent
-            setIsGenerating(true)
+        setIsGenerating(true)
             setStatus('IDLE')
             
             try {
@@ -484,9 +494,9 @@ export default function Dashboard() {
     const selectedFileContent = projectFiles.find(f => f.name === selectedFile)?.content || ""
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
+        <div className="h-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden">
             {/* Header */}
-            <header className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-3 flex items-center justify-between">
+            <header className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3">
                         <Zap className="h-5 w-5 text-purple-500" />
@@ -537,7 +547,7 @@ export default function Dashboard() {
 
             {/* Settings Panel */}
             {showSettings && (
-                <div className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-4">
+                <div className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-4 flex-shrink-0">
                     <Card className="bg-gray-900 border-gray-700">
                         <CardHeader>
                             <div className="flex items-center justify-between">
@@ -586,7 +596,7 @@ export default function Dashboard() {
 
             {/* Profile Panel */}
             {showProfile && (
-                <div className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-4">
+                <div className="border-b border-gray-800 bg-[#0f0f0f] px-6 py-4 flex-shrink-0">
                     <Card className="bg-gray-900 border-gray-700">
                         <CardHeader>
                             <div className="flex items-center justify-between">
@@ -626,7 +636,7 @@ export default function Dashboard() {
 
 
             {/* Main Content - Three Panels */}
-            <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden min-h-0">
                 {/* Left Panel - Projects & Explorer */}
                 <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="border-r border-gray-800 bg-[#0f0f0f] flex flex-col">
                     {/* Project Switcher */}
@@ -753,7 +763,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                         {/* Plan Display - Integrated into scrollable chat */}
                         {currentPlan && (
                             <div className="flex justify-start">
@@ -952,19 +962,24 @@ export default function Dashboard() {
                         )}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className="border-t border-gray-800 p-4 flex-shrink-0">
+                    <div className="border-t border-gray-800 p-4 flex-shrink-0 bg-[#0a0a0a]">
                         <div className="flex space-x-2">
                             <Textarea
                                 value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
+                                onChange={(e) => {
+                                    setPrompt(e.target.value);
+                                    // Prevent auto-scroll on input
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                }}
                                 onKeyDown={handleKeyPress}
                                 placeholder="Describe the dApp you want to build..."
-                                className="flex-1 bg-gray-900 border-gray-700 text-white resize-none"
+                                className="flex-1 bg-gray-900 border-gray-700 text-white resize-none max-h-32 overflow-y-auto"
                                 rows={3}
                                 disabled={isGenerating}
-                                onFocus={(e) => {
-                                    // Prevent page scroll when focusing textarea
-                                    e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                style={{ 
+                                    maxHeight: '128px',
+                                    overflowY: 'auto'
                                 }}
                             />
                             <Button
